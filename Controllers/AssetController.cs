@@ -121,6 +121,9 @@ namespace WebAppBackend.Controllers
             if (numfiles == 0)
             {
                 TempData["AssetSeedMissing"] = "The Publish folder is empty, please upload files to the Publish folder before using the Seeding method.";
+            } else
+            {
+                TempData["AssetSeedSuccess"] = "Seeding operation into Assets and Categories: Successful!";
             }
             
             await _context.SaveChangesAsync();
@@ -151,9 +154,7 @@ namespace WebAppBackend.Controllers
             
             await _context.SaveChangesAsync();
 
-            await FoldersContentGetter(_filePathProvider, localFolders);
-            
-            TempData["AssetSeedSuccess"] = "Seeding operation into Assets and Categories: Successful!";
+            await FoldersContentGetter(_filePathProvider, localFolders);           
             
             return RedirectToAction("Index", "Asset");
         }
