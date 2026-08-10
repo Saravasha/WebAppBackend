@@ -1,17 +1,42 @@
 ﻿@using Microsoft.AspNetCore.Hosting
+@using WebAppBackend.Services
 @inject IWebHostEnvironment env
-﻿
+@inject ISettingsProvider SettingsProvider
+@inject WebAppBackend.Data.ApplicationDbContext _context
+
+@{
+    var appSettings = await SettingsProvider.GetAsync();
+}﻿
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+    
+  <style>
+    @foreach (var font in _context.Assets.Where(a => a.Type == AssetType.Font))
+    {
+        <text>
+        @@font-face {
+            font-family: "@font.Name";
+            src: url("@font.FileUrl");
+            font-style: normal;
+            font-weight: normal;
+        }
+        </text>
+    }
+</style>
+
+
+    <link rel="icon"
+      href="@(appSettings.Branding.FaviconAsset != null 
+            ? $"{appSettings.Branding.FaviconAsset.FileUrl}" 
+            : "/favicon.ico")">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    @* MULTI-COMMITTER:PROTECTED:START MetaContent *@
-    <meta name="description" content="__PROJECT_NAME__ - web application for managing productions, assets, and content." />
-    @* MULTI-COMMITTER:PROTECTED:END MetaContent *@
-    @* MULTI-COMMITTER:PROTECTED:START ClientTitle *@
-    <title>@ViewData["Title"] - __PROJECT_NAME__</title>
-    @* MULTI-COMMITTER:PROTECTED:END ClientTitle *@
+    <meta name="description" content="@appSettings.Branding.Description" />
+    <title>@ViewData["Title"] - @appSettings.Branding.AppName</title>
     <environment include="Development">
         <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.css" />
     </environment>
@@ -51,9 +76,7 @@
             {
                 <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
                     <div class="container-fluid">
-                        @* MULTI-COMMITTER:PROTECTED:START NavbarBrand *@
-                        <a class="navbar-brand" asp-controller="Home" asp-action="Index">__PROJECT_NAME__</a>
-                        @* MULTI-COMMITTER:PROTECTED:END NavbarBrand *@
+                        <a class="navbar-brand" asp-controller="Home" asp-action="Index">@appSettings.Branding.AppName</a>
                         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNavbar"
                                 aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
                             <span class="navbar-toggler-icon"></span>
@@ -73,11 +96,21 @@
                                 <li class="nav-item mr-2 my-1">
                                     <a class="btn btn-outline-secondary" asp-controller="Page" asp-action="Index">Pages</a>
                                 </li>
+                                   <li class="nav-item mr-2 my-1">
+                                    <a class="btn btn-outline-secondary" asp-controller="Chapter" asp-action="Index">Chapter</a>
+                                </li>
                                 <li class="nav-item mr-2 my-1">
                                     <a class="btn btn-outline-secondary" asp-controller="Content" asp-action="Index">Content</a>
                                 </li>
                                 <li class="nav-item mr-2 my-1">
                                     <a class="btn btn-outline-secondary" asp-controller="Color" asp-action="Index">Colors</a>
+                                </li>
+                                <li class="nav-item mr-2 my-1">
+                                    <a class="btn btn-outline-secondary" asp-controller="Font" asp-action="Index">Fonts</a>
+                                </li>
+
+                                  <li class="nav-item mr-2 my-1">
+                                    <a class="btn btn-outline-secondary" asp-controller="Settings" asp-action="Index">Settings</a>
                                 </li>
                             </ul>
                             <ul class="navbar-nav ml-auto mb-2 mb-lg-0">
@@ -111,20 +144,53 @@
                 </div>
             </div>
 
+            <div class="position-fixed" style="bottom: 0; right: 0; padding: 1rem; z-index: 9999;">
+                <div id="seedFilesMissing" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body-seedAssetsMissing">
+                            @TempData["AssetSeedMissing"]
+                        </div>
+                        <button type="button" class="close text-white ml-2 mb-auto" data-dismiss="toast" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="position-fixed" style="bottom: 0; right: 0; padding: 1rem; z-index: 9999;">
+                <div id="seedFilesSuccess" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body-seedAssetsSuccess">
+                            @TempData["AssetSeedSuccess"]
+                        </div>
+                        <button type="button" class="close text-white ml-2 mb-auto" data-dismiss="toast" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    var toastEl = document.getElementById('cleanupToast');
-                    if (toastEl && toastEl.querySelector('.toast-body').textContent.trim()) {
+            document.addEventListener('DOMContentLoaded', function () {
+                var toastIds = ['cleanupToast', 'seedFilesMissing', 'seedFilesSuccess'];
+
+                toastIds.forEach(function (id) {
+                    var toastEl = document.getElementById(id);
+
+                    if (toastEl && toastEl.querySelector('.toast-body, .toast-body-seedAssetsMissing, .toast-body-seedAssetsSuccess').textContent.trim()) {
+                            $(toastEl).toast({
+                                autohide: true,
+                                delay: 5000
+                            });
                         $(toastEl).toast('show');
                     }
                 });
-            </script>
-            <footer class="container-fluid border-top footer text-muted text-center py-3 ">
-                @* MULTI-COMMITTER:PROTECTED:START Footer *@
-                &copy; __PROJECT_NAME__ - @(DateTime.Now.Year) - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                @* MULTI-COMMITTER:PROTECTED:END Footer *@
-            </footer>
-        }
+            });
+        </script>
+        <footer class="container-fluid border-top footer text-muted text-center py-3 ">
+            &copy; @appSettings.Branding.AppName - @(DateTime.Now.Year) - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </footer>
+    }
     </div>
     <environment include="Development">
         <script src="~/lib/jquery/jquery.js"></script>

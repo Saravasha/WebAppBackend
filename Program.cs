@@ -19,24 +19,16 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Set connection string based on environment
 string connectionString;
-
 if (builder.Environment.IsDevelopment())
 {
     var baseConnStr = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
     // Generate a dev-only DB name (e.g., from machine or folder name)
-    string devDbName = $"DevDb_{Path.GetFileName(Environment.CurrentDirectory)}";
-
     // Replace catalog in connection string
-    var sqlBuilder = new SqlConnectionStringBuilder(baseConnStr)
-    {
-        InitialCatalog = devDbName
-    };
+    connectionString = DbConnectionProvider.BuildDevelopmentConnectionString(baseConnStr);
 
-    connectionString = sqlBuilder.ToString();
-
-    Console.WriteLine($"🛠️ Development DB: {sqlBuilder.InitialCatalog}");
+    Console.WriteLine($"🛠️ Development DB: {DbConnectionProvider.GetDevelopmentDatabaseName()}");
 }
 else
 {
@@ -74,15 +66,18 @@ builder.Services.AddScoped<AssetTypeProvider>();
 builder.Services.AddHostedService<OrphanAnnihilatorBackgroundService>();
 builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IHtmlSanitizerService, HtmlSanitizerService>();
+builder.Services.AddScoped<ISettingsProvider, SettingsProvider>();
 
 // CORS setup
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
     options.AddPolicy("corsPolicy", policy =>
     {
-        policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader();
+        policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
     })
 );
+
+
 
 // Identity options
 builder.Services.Configure<IdentityOptions>(options =>
@@ -154,49 +149,65 @@ if (!string.IsNullOrEmpty(builder.Configuration["BasePath"]))
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var dbContext = services.GetRequiredService<ApplicationDbContext>();
     var config = services.GetRequiredService<IConfiguration>();
     var env = services.GetRequiredService<IHostEnvironment>();
     var filePathProvider = services.GetRequiredService<FilePathProvider>();
     var robotsPath = filePathProvider.RobotsTxtPath;
 
-    try
-    {
-        // Apply migrations
-        Console.WriteLine("Applying EF Core migrations...");
-        dbContext.Database.Migrate();
-        Console.WriteLine("Migrations applied.");
-        // Seed Database
-        Console.WriteLine("Seeding database...");
-        await SeedData.InitializeAsync(services, config);
-        Console.WriteLine("Seeding complete.");
+    //AddStaticFilesRecursively(filePathProvider.WebAssetsRoot, app);
+    // Settings Provider Preflight
 
 
-        if (env.IsStaging())
-        {
-            if (!File.Exists(robotsPath))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(robotsPath)!);
-                File.WriteAllText(robotsPath, "User-agent: *\nDisallow: /");
-                Console.WriteLine("Created staging robots.txt to block crawlers (staging environment).");
-            }
-        }
-        else
-        {
-            // Not staging — remove robots.txt if it exists
-            if (File.Exists(robotsPath))
-            {
-                File.Delete(robotsPath);
-                Console.WriteLine("Deleted robots.txt from non-staging environment.");
-            }
-        }
-    }
-    catch (Exception ex)
+
+    if (env.IsStaging())
     {
-        Console.WriteLine("Error during migration or seeding:");
-        Console.WriteLine(ex);
-        throw;
+        if (!File.Exists(robotsPath))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(robotsPath)!);
+            File.WriteAllText(robotsPath, "User-agent: *\nDisallow: /");
+            Console.WriteLine("Created staging robots.txt to block crawlers (staging environment).");
+        }
     }
+    else
+    {
+        // Not staging — remove robots.txt if it exists
+        if (File.Exists(robotsPath))
+        {
+            File.Delete(robotsPath);
+            Console.WriteLine("Deleted robots.txt from non-staging environment.");
+        }
+    }
+
+    // Apply migrations if not prod
+    if (env.IsDevelopment())
+    {
+        try
+        {
+            var dbContext = services.GetRequiredService<ApplicationDbContext>();
+
+            Console.WriteLine("Applying EF Core migrations...");
+            dbContext.Database.Migrate();
+            Console.WriteLine("Migrations applied.");
+            // Seed Database
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error during migration or seeding:");
+            Console.WriteLine(ex);
+            throw;
+        }
+
+    }
+
+    Console.WriteLine("Seeding database...");
+    await SeedData.InitializeAsync(services, config);
+    Console.WriteLine("Seeding complete.");
+
+    var settingsProvider = scope.ServiceProvider
+        .GetRequiredService<ISettingsProvider>();
+
+    await settingsProvider.GetOrCreateAsync();
 }
 
 // SMTP validation
@@ -214,9 +225,18 @@ if (smtpSettings == null ||
 app.UseRouting();
 app.UseCors("corsPolicy");
 
+
 // Serve static files
 app.UseStaticFiles();
 
+using (var scope = app.Services.CreateScope())
+{
+    var filePathProvider = scope.ServiceProvider.GetRequiredService<FilePathProvider>();
+    var robotsPath = filePathProvider.RobotsTxtPath;
+    DirectoryAsserter(filePathProvider.UploadsRoot, "/Uploads");
+    DirectoryAsserter(filePathProvider.PublishRoot, "/Publish");
+
+}
 // Mount Uploads and Assets recursively
 void DirectoryAsserter(string path, string requestPath)
 {
@@ -237,14 +257,6 @@ void AddStaticFilesRecursively(string directory, WebApplication app)
     {
         AddStaticFilesRecursively(subdirectory, app);
     }
-}
-
-using (var scope = app.Services.CreateScope())
-{
-    var filePathProvider = scope.ServiceProvider.GetRequiredService<FilePathProvider>();
-    DirectoryAsserter(filePathProvider.UploadsRoot, "/Uploads");
-    DirectoryAsserter(filePathProvider.PublishRoot, "/Publish");
-    AddStaticFilesRecursively(filePathProvider.WebAssetsRoot, app);
 }
 
 app.UseAuthentication();

@@ -7,7 +7,7 @@
 
 <section class="container my-4">
     <h1 class="mb-3">@ViewData["Title"]</h1>
-    <h4 class="mb-4">Add child sections to a Page container</h4>
+    <h4 class="mb-4">Add child sections to a Content container</h4>
 
     <form asp-action="Create" method="post" enctype="multipart/form-data" class="card shadow-sm p-4">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
@@ -27,13 +27,13 @@
             <span asp-validation-for="Container" class="text-danger"></span>
         </div>
         <div class="form-group mb-4">
-            <label asp-for="PageId" class="control-label"></label>
-            <select asp-for="PageId" asp-items="ViewBag.PageList" class="form-control" required>
-                <option disabled selected>--Select Page--</option>
+            <label asp-for="ChapterId" class="control-label"></label>
+            <select asp-for="ChapterId" asp-items="ViewBag.ChapterList" class="form-control" required>
+                <option disabled selected>--Select Chapter--</option>
             </select>
-            @if (ViewBag.PageError != null)
+            @if (ViewBag.ChapterError != null)
             {
-                <span class="text-danger">@ViewBag.PageError</span>
+                <span class="text-danger">@ViewBag.ChapterError</span>
             }
         </div>
         <!-- Submit -->

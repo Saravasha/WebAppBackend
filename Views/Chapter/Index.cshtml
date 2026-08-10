@@ -1,0 +1,297 @@
+﻿@using WebAppBackend.Models
+@model IEnumerable<ChapterViewModel>
+
+@{
+    ViewData["Title"] = "Chapter Index";
+
+    var assignedGroups = Model
+        .Where(c => c.PageId != null)
+        .GroupBy(c => c.PageId);
+
+    var unassignedChapters = Model
+        .Where(c => c.Page == null)
+        .ToList();
+}
+
+
+<section class="container-fluid my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">@ViewData["Title"]</h1>
+        <a asp-controller="Chapter" asp-action="Create" class="btn btn-success">
+            <i class="bi bi-plus-lg mr-1"></i>New Chapter
+        </a>
+    </div>
+</section>
+
+
+<section class="mb-5 border rounded p-3 shadow-sm">
+<h2>Pages:</h2>
+<div>
+@foreach (var pageGroup in assignedGroups)
+{
+
+        <i class="mb-3">(@pageGroup.First().Relationship.ParentTitle)</i>
+
+        <div class="table-responsive">
+
+            <table class="table table-bordered table-striped align-middle text-center">
+
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Chapter Title</th>
+                        <th>Content Body</th>
+                        <th>Page Relationships</th>
+                        <th>Chapter Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @foreach (var item in pageGroup.OrderBy(c => c.Order))
+                    {
+                        <tr id="@item.Id">
+                            <td class="text-center align-middle">@Html.DisplayFor(modelItem => item.Title)</td>
+                            <td class="text-center align-middle">@Html.Raw(item.Container)</td>
+                            <!-- Relationships -->
+                            <td class="align-middle">
+                                @if (item.Relationship != null)
+                                {
+                                    @if (!string.IsNullOrEmpty(item.Relationship.ParentLabel))
+                                    {
+                                        <strong>@item.Relationship.ParentLabel</strong>
+
+                                        @if (!string.IsNullOrEmpty(item.Relationship.ParentTitle))
+                                        {
+                                            <br />
+                                            <span class="badge badge-primary">
+                                                @item.Relationship.ParentTitle
+                                            </span>
+                                        }
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(item.Relationship.ChildLabel))
+                                    {
+                                        <div class="mt-2">
+                                            <strong>@item.Relationship.ChildLabel</strong>
+                                        </div>
+
+                                        @if (item.Relationship.Children.Any())
+                                        {
+                                            foreach (var child in item.Relationship.Children)
+                                            {
+                                                <span class="badge badge-secondary">
+                                                    @child
+                                                </span>
+                                                <br />
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <em>No @item.Relationship.ChildLabel available.</em>
+                                        }
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(item.Relationship.GrandchildLabel))
+                                    {
+                                        <div class="mt-2">
+                                            <strong>@item.Relationship.GrandchildLabel</strong>
+                                        </div>
+
+                                        @if (item.Relationship.Grandchildren.Any())
+                                        {
+                                            foreach (var grandchild in item.Relationship.Grandchildren)
+                                            {
+                                                <span class="badge badge-secondary">
+                                                    @grandchild
+                                                </span>
+                                                <br />
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <em>No @item.Relationship.GrandchildLabel available.</em>
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    <em>No relationships available.</em>
+                                }
+                            </td>
+                            <td class="text-center align-middle">@Html.DisplayFor(modelItem => item.Date)</td>
+                            <td class="text-center align-middle">
+                                <div class="btn-group btn-group-sm d-flex justify-content-center" role="group">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil-square mr-1"></i>Edit
+                                    </a>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="Details">
+                                        <i class="bi bi-info-circle mr-1"></i>Details
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash mr-1"></i>Delete
+                                    </a>
+
+                                    <div class="btn-group btn-group-sm justify-content-center">
+                                        @if (item.CanMoveUp)
+                                        {
+                                            <a asp-action="MoveUp"
+                                               asp-route-id="@item.Id"
+                                                   class="btn btn-outline-secondary d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-arrow-up"></i>
+                                            </a>
+                                        }
+
+                                        @if (item.CanMoveDown)
+                                        {
+                                            <a asp-action="MoveDown"
+                                               asp-route-id="@item.Id"
+                                                   class="btn btn-outline-secondary d-flex align-items-center justify-content-center">
+                                                <i class="bi bi-arrow-down"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    }
+</div>
+
+@if (unassignedChapters.Any())
+{
+
+
+    <div class="border text-muted p-2">
+
+
+        <h3>
+            Unassigned Chapters
+        </h3>
+        <p>Unassigned: @unassignedChapters.Count()
+    </p>
+        <div class="table-responsive">
+
+            <table class="table table-bordered table-striped align-middle text-center">
+
+
+                    <thead class="thead-dark">
+
+                    <tr>
+                        <th>Chapter Title</th>
+                        <th>Content Body</th>
+                        <th>Page Relationships</th>
+                        <th>Chapter Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @foreach (var item in unassignedChapters)
+                    {
+                        <tr>
+                            <td class="text-center align-middle">@Html.DisplayFor(modelItem => item.Title)</td>
+                            <td class="text-center align-middle">@Html.Raw(item.Container)</td>
+                            <!-- Relationships -->
+                            <td class="align-middle">
+                                @if (item.Relationship != null)
+                                {
+                                    @if (!string.IsNullOrEmpty(item.Relationship.ParentLabel))
+                                    {
+                                        <strong>@item.Relationship.ParentLabel</strong>
+
+                                        @if (!string.IsNullOrEmpty(item.Relationship.ParentTitle))
+                                        {
+                                            <br />
+                                            <span class="badge badge-primary">
+                                                @item.Relationship.ParentTitle
+                                            </span>
+                                        }
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(item.Relationship.ChildLabel))
+                                    {
+                                        <div class="mt-2">
+                                            <strong>@item.Relationship.ChildLabel</strong>
+                                        </div>
+
+                                        @if (item.Relationship.Children.Any())
+                                        {
+                                            foreach (var child in item.Relationship.Children)
+                                            {
+                                                <span class="badge badge-secondary">
+                                                    @child
+                                                </span>
+                                                <br />
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <em>No @item.Relationship.ChildLabel available.</em>
+                                        }
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(item.Relationship.GrandchildLabel))
+                                    {
+                                        <div class="mt-2">
+                                            <strong>@item.Relationship.GrandchildLabel</strong>
+                                        </div>
+
+                                        @if (item.Relationship.Grandchildren.Any())
+                                        {
+                                            foreach (var grandchild in item.Relationship.Grandchildren)
+                                            {
+                                                <span class="badge badge-secondary">
+                                                    @grandchild
+                                                </span>
+                                                <br />
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <em>No @item.Relationship.GrandchildLabel available.</em>
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    <em>No relationships available.</em>
+                                }
+                            </td>
+                            <td class="text-center align-middle">@Html.DisplayFor(modelItem => item.Date)</td>
+                            <td class="text-center align-middle">
+                                <div class="btn-group btn-group-sm d-flex justify-content-center" role="group">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil-square mr-1"></i>Edit
+                                    </a>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="Details">
+                                        <i class="bi bi-info-circle mr-1"></i>Details
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash mr-1"></i>Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+}
+    </section>
+
+@section Styles {
+    <link href="~/css/page.css" rel="stylesheet" />
+
+}

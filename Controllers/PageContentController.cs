@@ -25,6 +25,22 @@ namespace WebAppBackend.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetFonts()
+        {
+            var fonts = await _context.Assets
+                .Where(a => a.Type == AssetType.Font)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Name,
+                    a.FileUrl
+                })
+                .ToListAsync();
+
+            return Ok(fonts);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetAssets()
         {
             var assets = await _context.Assets.Select(a => new { a.Id, a.FileUrl, a.Name, a.ThumbnailUrl }).ToListAsync();
@@ -46,12 +62,7 @@ namespace WebAppBackend.Controllers
 
                 var fileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(file.FileName);
                 var filePath = Path.Combine(_uploadsFolder, fileName);
-
-                //if (System.IO.File.Exists(filePath))
-                //{
-                //    System.IO.File.Copy(filePath, "Uploads");
-                //}
-                // Save the file to the server
+                
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await file.CopyToAsync(stream);

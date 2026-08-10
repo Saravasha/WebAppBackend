@@ -24,12 +24,12 @@
         </div>
 
         <div class="form-group mb-4">
-            <label asp-for="ContentIds" class="control-label"></label>
-            <select asp-for="ContentIds" asp-items="ViewBag.ContentList" multiple class="form-control" aria-describedby="contentsHelp">
+            <label asp-for="ChapterIds" class="control-label"></label>
+            <select asp-for="ChapterIds" asp-items="ViewBag.ChapterList" multiple class="form-control" aria-describedby="contentsHelp">
             </select>
-            @if (ViewBag.ContentError != null)
+            @if (ViewBag.ChapterError != null)
             {
-                <div class="text-danger mt-1">@ViewBag.ContentError</div>
+                <div class="text-danger mt-1">@ViewBag.ChapterError</div>
             }
             <div id="contentHelp" class="form-text">
                 Hold Ctrl (Cmd on Mac) to select multiple items.

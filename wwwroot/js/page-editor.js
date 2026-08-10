@@ -1,6 +1,4 @@
-﻿
-window.PageEditor = (() => {
-
+﻿window.PageEditor = (() => {
     let summernoteInstance;
     let debounceTimer;
     let allAssets = [];
@@ -12,78 +10,69 @@ window.PageEditor = (() => {
         return `${basePath}${path}`;
     }
 
-
     function init(config) {
-
         basePath = config.basePath || "";
         rootPath = config.rootPath || "";
 
         initSummernote();
         setupAssetModal();
         setupAssetSearch();
-        $('#clearFiltersBtn').on('click', () => {
-            $('#assetSearchForm')[0].reset();
+        $("#clearFiltersBtn").on("click", () => {
+            $("#assetSearchForm")[0].reset();
             loadAssets();
         });
-    };
-
+    }
 
     function getMimeType(fileUrl) {
-        const ext = fileUrl.split('.').pop().toLowerCase();
+        const ext = fileUrl.split(".").pop().toLowerCase();
 
         // Images
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
-            return `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) {
+            return `image/${ext === "jpg" ? "jpeg" : ext}`;
         }
 
         // Videos
-        if (['mp4', 'webm', 'ogg'].includes(ext)) {
-            if (ext === 'mp4') return 'video/mp4';
-            if (ext === 'webm') return 'video/webm';
-            if (ext === 'ogg') return 'video/ogg';
+        if (["mp4", "webm", "ogg"].includes(ext)) {
+            if (ext === "mp4") return "video/mp4";
+            if (ext === "webm") return "video/webm";
+            if (ext === "ogg") return "video/ogg";
         }
 
         // Audio
-        if (['mp3', 'wav', 'ogg'].includes(ext)) {
-            if (ext === 'mp3') return 'audio/mpeg';
-            if (ext === 'wav') return 'audio/wav';
-            if (ext === 'ogg') return 'audio/ogg';
+        if (["mp3", "wav", "ogg"].includes(ext)) {
+            if (ext === "mp3") return "audio/mpeg";
+            if (ext === "wav") return "audio/wav";
+            if (ext === "ogg") return "audio/ogg";
         }
 
         // Documents
-        if (ext === 'pdf') return 'application/pdf';
-        if (ext === 'doc') return 'application/msword';
-        if (ext === 'docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        if (ext === "pdf") return "application/pdf";
+        if (ext === "doc") return "application/msword";
+        if (ext === "docx")
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
         // Text
-        if (['txt', 'md'].includes(ext)) return 'text/plain';
+        if (["txt", "md"].includes(ext)) return "text/plain";
 
         // Fallback
-        return 'application/octet-stream';
+        return "application/octet-stream";
     }
 
     function getAssetType(fileUrl) {
+        if (/\.(jpe?g|png|gif|webp|svg)$/i.test(fileUrl)) return "image";
 
-        if (/\.(jpe?g|png|gif|webp|svg)$/i.test(fileUrl))
-            return "image";
+        if (/\.(mp4|webm|ogg)$/i.test(fileUrl)) return "video";
 
-        if (/\.(mp4|webm|ogg)$/i.test(fileUrl))
-            return "video";
+        if (/\.(mp3|wav|ogg)$/i.test(fileUrl)) return "audio";
 
-        if (/\.(mp3|wav|ogg)$/i.test(fileUrl))
-            return "audio";
+        if (/\.(pdf|doc|docx)$/i.test(fileUrl)) return "document";
 
-        if (/\.(pdf|doc|docx)$/i.test(fileUrl))
-            return "document";
-
-        if (/\.(txt|md)$/i.test(fileUrl))
-            return "text";
+        if (/\.(txt|md)$/i.test(fileUrl)) return "text";
 
         return "other";
     }
 
     function buildAssetPreview(asset, fullUrl, mediaUrl, mimeType) {
-
         function getAssetCardAttributes(asset, fullUrl, mimeType) {
             return `
         tabindex="0"
@@ -97,9 +86,7 @@ window.PageEditor = (() => {
         }
 
         switch (getAssetType(asset.fileUrl)) {
-
             case "image":
-
                 return `
                        
                     <div class="asset-video-preview asset-card" ${getAssetCardAttributes(asset, fullUrl, mimeType)}>
@@ -122,12 +109,11 @@ window.PageEditor = (() => {
                     `;
 
             case "video":
-
-                const thumb =
-                    asset.thumbnailUrl
-                        ? window.location.origin + '/' +
-                        asset.thumbnailUrl.replace(/^\/+/, '')
-                        : fullUrl;
+                const thumb = asset.thumbnailUrl
+                    ? window.location.origin +
+                    "/" +
+                    asset.thumbnailUrl.replace(/^\/+/, "")
+                    : fullUrl;
 
                 return `
         <div class="asset-video-preview asset-card" ${getAssetCardAttributes(asset, fullUrl, mimeType)}>
@@ -156,7 +142,6 @@ window.PageEditor = (() => {
     `;
 
             case "audio":
-
                 return `
                     <div class="asset-card" ${getAssetCardAttributes(asset, fullUrl, mimeType)}>
 
@@ -254,22 +239,19 @@ window.PageEditor = (() => {
     }
 
     function buildSummernoteHtml(asset, mediaUrl, mimeType, downloadUrl) {
-
         switch (getAssetType(asset.fileUrl)) {
-
             case "image":
                 return {
                     image: true,
-                    url: asset.fileUrl
+                    url: asset.fileUrl,
                 };
 
             case "video": {
-
-                const poster =
-                    asset.thumbnailUrl
-                        ? window.location.origin + "/" +
-                        asset.thumbnailUrl.replace(/^\/+/, "")
-                        : "";
+                const poster = asset.thumbnailUrl
+                    ? window.location.origin +
+                    "/" +
+                    asset.thumbnailUrl.replace(/^\/+/, "")
+                    : "";
 
                 return `
                         <video
@@ -350,17 +332,15 @@ window.PageEditor = (() => {
     }
 
     function getAssetDownloadUrl(asset) {
-
         const type = getAssetType(asset.fileUrl);
 
         if ((type == "document" || type === "text") && asset.id) {
-            return apiUrl(`/Asset/Download/${asset.id}`)
+            return apiUrl(`/Asset/Download/${asset.id}`);
         }
         return asset.fileUrl;
     }
 
     function getAssetMediaUrl(asset) {
-
         const type = getAssetType(asset.fileUrl);
 
         if ((type === "video" || type === "audio") && asset.id) {
@@ -370,96 +350,131 @@ window.PageEditor = (() => {
         return asset.fileUrl;
     }
 
-    function initSummernote() {
-        $('#summernote').summernote({
+    async function getEditorFonts() {
+        const response = await fetch(apiUrl(`/PageContent/GetFonts`));
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const fonts = await response.json();
+
+        return fonts;
+    }
+
+    function injectFonts(fonts) {
+
+        const style = document.createElement("style");
+
+        style.innerHTML = fonts.map(font => `
+        @font-face {
+            font-family: "${font.name}";
+            src: url("${font.fileUrl}");
+        }
+    `).join("");
+
+        document.head.appendChild(style);
+    }
+
+    async function initSummernote() {
+
+        const fonts = await getEditorFonts();
+
+        injectFonts(fonts);
+
+        const summernoteFonts = [
+            ...new Set([
+                ...$.summernote.options.fontNames,
+                ...fonts.map(x => x.name)
+            ])
+        ];
+
+        $("#summernote").summernote({
             height: 300,
+
+            fontNames: summernoteFonts,
+
             codeviewFilter: false,
             codeviewIframeFilter: false,
             callbacks: {
                 onImageUpload(files) {
                     if (!files.length) return;
                     const file = files[0];
-                    if (file.type.startsWith('image/')) {
-                        uploadFile(file, 'image');
-                    } else if (file.type.startsWith('video/')) {
-                        uploadFile(file, 'video');
-                    } else if (file.type.startsWith('audio/')) {
-                        uploadFile(file, 'audio');
-                    } else if (file.type.startsWith('document/')) {
-                        uploadFile(file, 'document');
-                    } else if (file.type.startsWith('text/')) {
-                        uploadFile(file, 'text');
+                    if (file.type.startsWith("image/")) {
+                        uploadFile(file, "image");
+                    } else if (file.type.startsWith("video/")) {
+                        uploadFile(file, "video");
+                    } else if (file.type.startsWith("audio/")) {
+                        uploadFile(file, "audio");
+                    } else if (file.type.startsWith("document/")) {
+                        uploadFile(file, "document");
+                    } else if (file.type.startsWith("text/")) {
+                        uploadFile(file, "text");
                     } else {
-                        alert('Unsupported file type.');
+                        alert("Unsupported file type.");
                     }
-                }
+                },
             },
             toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'italic', 'underline', 'clear']],
-                ['fontname', ['fontname']],
-                ['color', ['color']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['height', ['height']],
-                ['table', ['table']],
-                ['insert', ['link', 'picture', 'video', 'insertAsset']],
-                ['view', ['fullscreen', 'codeview', 'help']]
+                ["style", ["style"]],
+                ["font", ["bold", "italic", "underline", "clear"]],
+                ["fontname", ["fontname"]],
+                ["color", ["color"]],
+                ["para", ["ul", "ol", "paragraph"]],
+                ["height", ["height"]],
+                ["table", ["table"]],
+                ["insert", ["link", "picture", "video", "insertAsset"]],
+                ["view", ["fullscreen", "codeview", "help"]],
             ],
             buttons: {
                 insertAsset(context) {
                     const ui = $.summernote.ui;
                     summernoteInstance = context;
-                    return ui.button({
-                        contents: '<i class="note-icon-picture"></i> Insert Asset',
-                        tooltip: 'Insert Asset from Asset Library',
-                        click() {
-                            $('#assetModal').modal('show');
-                        }
-                    }).render();
-                }
-            }
-
+                    return ui
+                        .button({
+                            contents: '<i class="note-icon-picture"></i> Insert Asset',
+                            tooltip: "Insert Asset from Asset Library",
+                            click() {
+                                $("#assetModal").modal("show");
+                            },
+                        })
+                        .render();
+                },
+            },
         });
 
-        $('#summernote').next('.note-editor').on('keydown', function (e) {
+        $("#summernote")
+            .next(".note-editor")
+            .on("keydown", function (e) {
+                if (e.key !== "Delete" && e.key !== "Backspace") return;
 
-            if (e.key !== 'Delete' && e.key !== 'Backspace')
-                return;
+                const selected = $(".asset-selected");
 
-            const selected = $('.asset-selected');
+                if (!selected.length) return;
 
-            if (!selected.length)
-                return;
+                e.preventDefault();
 
-            e.preventDefault();
-
-            selected.remove();
-        });
-        $('#summernote').next('.note-editor').on(
-            'click',
-            '.asset-document, .asset-text',
-            function () {
-
-                $('.asset-selected').removeClass('asset-selected');
-                $(this).addClass('asset-selected');
-
+                selected.remove();
             });
-
+        $("#summernote")
+            .next(".note-editor")
+            .on("click", ".asset-document, .asset-text", function () {
+                $(".asset-selected").removeClass("asset-selected");
+                $(this).addClass("asset-selected");
+            });
     }
 
     function uploadFile(file) {
         const formData = new FormData();
-        formData.append('file', file);
-
+        formData.append("file", file);
 
         $.ajax({
             url: apiUrl(`/PageContent/UploadFile`),
-            method: 'POST',
+            method: "POST",
             data: formData,
             contentType: false,
             processData: false,
             success(data) {
-
                 if (!data.url) {
                     alert("File upload failed.");
                     return;
@@ -469,88 +484,89 @@ window.PageEditor = (() => {
                     id: data.id ?? 0,
                     name: data.name,
                     fileUrl: data.url,
-                    thumbnailUrl: data.thumbnailUrl
+                    thumbnailUrl: data.thumbnailUrl,
                 };
 
                 const mimeType = getMimeType(asset.fileUrl);
                 const mediaUrl = getAssetMediaUrl(asset);
+                const downloadUrl = getAssetDownloadUrl(asset);
+
                 const html = buildSummernoteHtml(
                     asset,
                     mediaUrl,
                     mimeType,
-                    downloadUrl
+                    downloadUrl,
                 );
 
                 if (html.image) {
-
-                    summernoteInstance.invoke(
-                        "editor.insertImage",
-                        html.url
-                    );
-
+                    summernoteInstance.invoke("editor.insertImage", html.url);
+                } else {
+                    summernoteInstance.invoke("editor.pasteHTML", html);
                 }
-                else {
-
-                    summernoteInstance.invoke(
-                        "editor.pasteHTML",
-                        html
-                    );
-
-                }
-            }
+            },
         });
     }
     function setupAssetModal() {
-        $('#assetModal').on('shown.bs.modal', async () => {
+        $("#assetModal").on("shown.bs.modal", async () => {
             await loadCategories();
             loadAssets();
         });
     }
 
     function setupAssetSearch() {
-        $('#assetSearchForm input, #assetSearchForm select').off('input change').on('input change', () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                const params = {};
-                $('#assetSearchForm').serializeArray().forEach(({ name, value }) => {
-                    if (value?.trim()) params[name] = value.trim();
-                });
-                loadAssets(params);
-            }, 300);
-        });
+        $("#assetSearchForm input, #assetSearchForm select")
+            .off("input change")
+            .on("input change", () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const params = {};
+                    $("#assetSearchForm")
+                        .serializeArray()
+                        .forEach(({ name, value }) => {
+                            if (value?.trim()) params[name] = value.trim();
+                        });
+                    loadAssets(params);
+                }, 300);
+            });
     }
 
     async function loadCategories() {
         try {
-            const res = await fetch(apiUrl('/api/react/category'));
+            const res = await fetch(apiUrl("/api/react/categories"));
             const categories = await res.json();
-            const select = $('#categorySelect');
+            const select = $("#categorySelect");
             select.empty().append('<option value="">All Categories</option>');
-            categories.forEach(cat => {
-                select.append(`<option value="${(cat.name || '').toLowerCase()}">${cat.name}</option>`);
+            categories.forEach((cat) => {
+                select.append(
+                    `<option value="${(cat.name || "").toLowerCase()}">${cat.name}</option>`,
+                );
             });
         } catch (err) {
-            console.error('Failed to load categories:', err);
+            console.error("Failed to load categories:", err);
         }
     }
 
     function loadAssets(params = {}) {
         if (!allAssets.length) {
-            fetch(apiUrl('/api/react/asset'))
-                .then(res => res.json())
-                .then(data => {
+            fetch(apiUrl("/api/react/assets"))
+                .then((res) => res.json())
+                .then((data) => {
                     allAssets = data;
                     renderAssets(filterAssets(allAssets, params));
                 })
-                .catch(err => console.error('Failed to load assets:', err));
+                .catch((err) => console.error("Failed to load assets:", err));
         } else {
             renderAssets(filterAssets(allAssets, params));
         }
     }
 
     function filterAssets(assets, params) {
-        return assets.filter(asset => {
-            if (params.name && !asset.name?.toLowerCase().includes(params.name.toLowerCase())) return false;
+        return assets.filter((asset) => {
+            if (
+                params.name &&
+                !asset.name?.toLowerCase().includes(params.name.toLowerCase())
+            )
+                return false;
 
             if (params.date) {
                 const assetDate = new Date(asset.dateString).toISOString().slice(0, 10);
@@ -560,15 +576,22 @@ window.PageEditor = (() => {
 
             if (params.category) {
                 const catFilter = params.category.toLowerCase();
-                if (!asset.categories?.some(c => (c.name || '').toLowerCase() === catFilter)) return false;
+                if (
+                    !asset.categories?.some(
+                        (c) => (c.name || "").toLowerCase() === catFilter,
+                    )
+                )
+                    return false;
             }
             return true;
         });
     }
 
     function renderAssets(assets) {
-        const container = $('#assetContainer');
-        $('#assetCount').text(`${assets.length} asset${assets.length !== 1 ? 's' : ''} found`);
+        const container = $("#assetContainer");
+        $("#assetCount").text(
+            `${assets.length} asset${assets.length !== 1 ? "s" : ""} found`,
+        );
         container.empty();
 
         if (!assets.length) {
@@ -579,20 +602,22 @@ window.PageEditor = (() => {
                     </div>
                 `);
 
-            $('#resetAfterEmpty').off('click').on('click', () => {
-                $('#assetSearchForm')[0].reset();
-                loadAssets();
-            });
+            $("#resetAfterEmpty")
+                .off("click")
+                .on("click", () => {
+                    $("#assetSearchForm")[0].reset();
+                    loadAssets();
+                });
 
             return;
         }
 
         const fullBaseUrl = window.location.origin + rootPath;
 
-        assets.forEach(asset => {
+        assets.forEach((asset) => {
             if (!asset.fileUrl) return;
 
-            const urlPath = asset.fileUrl.replace(/^\/+/, '');
+            const urlPath = asset.fileUrl.replace(/^\/+/, "");
             const fullUrl = fullBaseUrl + urlPath;
             const mediaUrl = getAssetMediaUrl(asset);
             const downloadUrl = getAssetDownloadUrl(asset);
@@ -600,12 +625,7 @@ window.PageEditor = (() => {
             const mimeType = getMimeType(fileUrl);
             const type = getAssetType(asset.fileUrl);
 
-            const mediaHtml = buildAssetPreview(
-                asset,
-                fullUrl,
-                mediaUrl,
-                mimeType
-            );
+            const mediaHtml = buildAssetPreview(asset, fullUrl, mediaUrl, mimeType);
 
             const assetDiv = $(`
                     <div class="col-md-3"">
@@ -613,39 +633,29 @@ window.PageEditor = (() => {
                     </div>
                 `);
 
-            assetDiv.find('.asset-card').on('click keypress', e => {
-
-                if (e.type === 'click' || e.key === 'Enter' || e.key === ' ') {
-
+            assetDiv.find(".asset-card").on("click keypress", (e) => {
+                if (e.type === "click" || e.key === "Enter" || e.key === " ") {
                     const html = buildSummernoteHtml(
                         asset,
                         mediaUrl,
                         mimeType,
-                        downloadUrl
+                        downloadUrl,
                     );
 
                     if (html.image) {
-                        summernoteInstance.invoke(
-                            'editor.insertImage',
-                            html.url
-                        );
-                    }
-                    else {
-                        summernoteInstance.invoke(
-                            'editor.pasteHTML',
-                            html
-                        );
+                        summernoteInstance.invoke("editor.insertImage", html.url);
+                    } else {
+                        summernoteInstance.invoke("editor.pasteHTML", html);
                     }
 
-                    $('#assetModal').modal('hide');
+                    $("#assetModal").modal("hide");
                 }
-
             });
             container.append(assetDiv);
         });
     }
 
     return {
-        init
+        init,
     };
 })();

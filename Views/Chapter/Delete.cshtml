@@ -1,0 +1,105 @@
+﻿@using WebAppBackend.Models
+@model ChapterViewModel
+
+@{
+    ViewData["Title"] = "Delete";
+}
+
+
+<section class="container my-4">
+    <div class="card shadow-sm border-danger">
+        <div class="card-header bg-danger text-white">
+            <h2 class="mb-0">Delete Confirmation</h2>
+        </div>
+
+        <div class="p-4">
+            <h3 class="mb-4 border-danger border-bottom pb-2">Are you sure you want to delete <strong>@Model.Title</strong>?</h3>
+
+            <dl class="row">
+                <dt class="col-sm-2">@Html.DisplayNameFor(model => model.Title)</dt>
+                <dd class="col-sm-10">
+                    @Html.DisplayFor(model => model.Title)
+                </dd>
+                <dt class="col-sm-2">@Html.DisplayNameFor(model => model.Container)</dt>
+                <dd class="col-sm-10 ChapterContainer">
+                    @Html.Raw(Model.Container)
+                </dd>
+                <dt class="col-sm-2 fw-semibold">
+                    Relationships
+                </dt>
+
+                <dd class="col-sm-10">
+
+                    @if (Model.Relationship != null)
+                    {
+                        @if (!string.IsNullOrEmpty(Model.Relationship.ParentLabel))
+                        {
+                            <div>
+                                <strong>
+                                    @Model.Relationship.ParentLabel
+                                </strong>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(Model.Relationship.ParentTitle))
+                            {
+                                <span class="badge badge-primary">
+                                    @Model.Relationship.ParentTitle
+                                </span>
+                            }
+                            else
+                            {
+                                <p class="text-muted fst-italic">
+                                    No @Model.Relationship.ParentLabel available.
+                                </p>
+                            }
+                        }
+
+
+                        @if (!string.IsNullOrEmpty(Model.Relationship.ChildLabel))
+                        {
+                            <div class="mt-3">
+                                <strong>
+                                    @Model.Relationship.ChildLabel
+                                </strong>
+                            </div>
+
+                            @if (Model.Relationship.Children.Any())
+                            {
+                                foreach (var child in Model.Relationship.Children)
+                                {
+                                    <span class="badge badge-secondary me-1">
+                                        @child
+                                    </span>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted fst-italic">
+                                    No @Model.Relationship.ChildLabel available.
+                                </p>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted fst-italic">
+                            No relationships available.
+                        </p>
+                    }
+
+                </dd>
+            </dl>
+        </div>
+
+        <!-- Submit -->
+        <div class="card-footer d-flex justify-content-between">
+            <form asp-controller="Chapter" asp-action="Delete" method="post" class="mb-0">
+                <input type="hidden" asp-for="Id" />
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash mr-1"></i>Delete
+                </button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
+</section>

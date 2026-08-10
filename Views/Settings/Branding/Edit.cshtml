@@ -1,0 +1,130 @@
+@using WebAppBackend.ViewModels.Settings
+@model BrandingViewModel
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+
+<section class="container my-4">
+    <h1 class="mb-3">@ViewData["Title"]</h1>
+    <h4 class="mb-4">Branding</h4>
+
+    <form asp-controller="Settings" asp-action="Branding" method="post" class="card shadow-sm p-4">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <div class="form-group mb-3">
+            <label asp-for="AppName" class="control-label"></label>
+            <input asp-for="AppName" class="form-control" />
+            <span asp-validation-for="AppName" class="text-danger"></span>
+        </div>
+        <div class="form-group mb-4">
+            <label asp-for="Description" class="control-label"></label>
+            <input asp-for="Description" class="form-control" />
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+        <div class="form-group mb-4">
+            <label asp-for="LoginImageAssetId" class="control-label mb-2"></label>
+
+            <select asp-for="LoginImageAssetId"
+                    asp-items="@(new SelectList(Model.AvailableAssets, "Id", "Name"))"
+                    class="form-control"
+                    id="loginImageAssetId">
+                <option value="">-- No image --</option>
+            </select>
+
+            <div class="mt-3">
+                <img id="loginImagePreview"
+                     class="rounded border"
+                     style="max-width:250px; max-height:150px; object-fit:cover;"
+                     src="@(Model.LoginImageAsset?.FileUrl ?? "")" />
+            </div>
+        </div>
+        <div class="form-group mb-4">
+            <label asp-for="FaviconAssetId" class="control-label mb-2"></label>
+
+            <select asp-for="FaviconAssetId"
+                    asp-items="@(new SelectList(Model.AvailableAssets, "Id", "Name"))"
+                    class="form-control"
+                    id="favIconAssetId">
+                <option value="">-- No image --</option>
+            </select>
+
+            <div class="mt-3">
+                <img id="favIconAssetPreview"
+                     class="rounded border"
+                     style="max-width:64px; max-height:64px; object-fit:contain;"
+                     src="@(Model.FaviconAsset?.FileUrl ?? "")" />
+            </div>
+        </div>
+
+        <div class="form-group mb-4">
+            <label asp-for="HomescreenAssetId" class="control-label mb-2"></label>
+
+            <select asp-for="HomescreenAssetId"
+                    asp-items="@(new SelectList(Model.AvailableAssets, "Id", "Name"))"
+                    class="form-control"
+                    id="homescreenAssetId">
+                <option value="">-- No image --</option>
+            </select>
+
+            <div class="mt-3">
+                <img id="homescreenAssetPreview"
+                     class="rounded border"
+                     style="max-width:250px; max-height:150px; object-fit:cover;"
+                     src="@(Model.HomescreenAsset?.FileUrl ?? "")" />
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center ">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-circle mr-1"></i>Save
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left mr-1"></i>Back to Settings
+            </a>
+        </div>
+    </form>
+
+
+
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+        <script>
+            const assets = {
+                @foreach (var asset in Model.AvailableAssets)
+                {
+                        <text>
+                            "@asset.Id": "@asset.FileUrl",
+                        </text>
+                }
+            };
+
+            document
+                .getElementById("loginImageAssetId")
+                .addEventListener("change", function () {
+                    const url = assets[this.value];
+                    document.getElementById("loginImagePreview").src = url ?? "";
+                });
+
+            document
+                .getElementById("favIconAssetId")
+                .addEventListener("change", function () {
+                    const url = assets[this.value];
+                    document.getElementById("favIconAssetPreview").src = url ?? "";
+                });
+
+            document
+                .getElementById("homescreenAssetId")
+                .addEventListener("change", function() {
+                    const url = assets[this.value];
+                    document.getElementById("homescreenAssetPreview").src = url ?? "";
+                });
+        </script>
+    }
+}
+
+

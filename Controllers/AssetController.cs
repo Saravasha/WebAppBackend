@@ -57,14 +57,18 @@ namespace WebAppBackend.Controllers
 
         private async Task FoldersContentGetter(FilePathProvider filePathProvider, List<string> localFolders)
         {
+            int numfiles = 0; 
             //CatalogViewModel cvm = new CatalogViewModel();
             foreach (var folder in localFolders)
             {
                 //Category catToAdd = new Category();
                 var category = _context.Categories.FirstOrDefault(c => c.Name == folder);
-                foreach (var item in Directory.GetFiles(Path.Combine(filePathProvider.PublishRoot, folder)))
+                var subFolder = Directory.GetFiles(Path.Combine(filePathProvider.PublishRoot, folder));
+
+                foreach (var file in subFolder)
                 {
-                    var fileInDirectory = new FileInfo(item).Name;
+                    numfiles++;
+                    var fileInDirectory = new FileInfo(file).Name;
                     var existingAsset = _context.Assets.FirstOrDefault(a =>
                         a.Name == fileInDirectory &&
                         a.Categories.Any(c => c.Name == folder));
@@ -97,6 +101,7 @@ namespace WebAppBackend.Controllers
                             continue;
                         }
 
+
                         if (assetType == AssetType.Video)
                         {
                             thumbPath = await _videoThumbnailProvider.GeneratePublishAsync(fullPath);
@@ -112,6 +117,12 @@ namespace WebAppBackend.Controllers
                 }
 
             }
+
+            if (numfiles == 0)
+            {
+                TempData["AssetSeedMissing"] = "The Publish folder is empty, please upload files to the Publish folder before using the Seeding method.";
+            }
+            
             await _context.SaveChangesAsync();
         }
 
@@ -127,6 +138,7 @@ namespace WebAppBackend.Controllers
                 localFolders.Add(dir);
             }
 
+
             foreach (var file in localFolders)
             {
 
@@ -134,10 +146,15 @@ namespace WebAppBackend.Controllers
                 {
                     _context.Categories.Update(new Category() { Name = file });
                 }
+                
             }
+            
             await _context.SaveChangesAsync();
 
             await FoldersContentGetter(_filePathProvider, localFolders);
+            
+            TempData["AssetSeedSuccess"] = "Seeding operation into Assets and Categories: Successful!";
+            
             return RedirectToAction("Index", "Asset");
         }
         [AllowAnonymous]
@@ -328,7 +345,7 @@ namespace WebAppBackend.Controllers
 
             if (ModelState.IsValid)
             {
-                var assetType = asset.FileUp != null ? _assetTypeProvider.GetAssetType(asset.FileUp.ContentType) : AssetType.Other;
+                var assetType = asset.FileUp != null ? _assetTypeProvider.GetAssetType(asset.FileUp) : AssetType.Other;
 
                 var AssetToAdd = new Models.Asset()
                 {
@@ -435,7 +452,7 @@ namespace WebAppBackend.Controllers
                     string? webFilePath = uploadResult?.WebPath;
 
                     assetToEdit.FileUrl = webFilePath;
-                    assetToEdit.Type = _assetTypeProvider.GetAssetType(asset.FileUp.ContentType);
+                    assetToEdit.Type = _assetTypeProvider.GetAssetType(asset.FileUp);
 
                     string? thumbPath = null;
 
@@ -495,10 +512,13 @@ namespace WebAppBackend.Controllers
             {
                 return NotFound();
             }
-
+            var isReferencedByFont = await _context.Fonts
+                .AnyAsync(f => f.AssetId == id);
+            
             var davm = new DeleteAssetViewModel
             {
-                Asset = asset
+                Asset = asset,
+                IsReferencedByFont = isReferencedByFont
             };
             if (asset.Type == AssetType.Text)
             {
@@ -520,6 +540,18 @@ namespace WebAppBackend.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id, IFormCollection collection)
         {
+
+            var isReferencedByFont = await _context.Fonts
+                .AnyAsync(f => f.AssetId == id);
+
+            if (isReferencedByFont)
+            {
+                TempData["Error"] =
+                    "This asset cannot be deleted because it is used by a font.";
+
+                return RedirectToAction(nameof(Delete), new { id });
+            }
+
             if (_context.Assets == null)
             {
                 return Problem("Entity set 'ApplicationDbContext.Assets' is null.");
@@ -579,7 +611,7 @@ namespace WebAppBackend.Controllers
                     ThumbnailUrl = thumbPath,
                     Location = model.Location,
                     Date = model.Date,
-                    Type = _assetTypeProvider.GetAssetType(file.ContentType)
+                    Type = _assetTypeProvider.GetAssetType(file)
                 };
 
                 foreach (var catId in model.Categories)

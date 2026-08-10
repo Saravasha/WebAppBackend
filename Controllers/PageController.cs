@@ -23,47 +23,130 @@ namespace WebAppBackend.Controllers
             _htmlSanitizer = htmlSanitizer;
         }
 
-
-        public async Task<IActionResult> Index()
+        private bool NeedsPageReIndex(List<Page> pages)
         {
-            var model = new List<PageViewModel>();
+            if (!pages.Any())
+            {
+                return false;
+            }
 
+            var highestOrder = pages.Max(p => p.Order);
+
+            // Example:
+            // 100 pages normally means highest order should be around 1000.
+            // If it exceeds 100x that, something is unusual.
+            var expectedMaximum = pages.Count * 10;
+
+            return highestOrder > expectedMaximum * 100;
+        }
+
+        private async Task ReIndexPagesAsync()
+        {
             var pages = await _context.Pages
-                .Include(p => p.Contents)
+                .OrderBy(p => p.Order)
                 .ToListAsync();
+
+            var order = 10;
 
             foreach (var page in pages)
             {
-                model.Add(new PageViewModel
-                {
-                    Id = page.Id,
-                    Title = page.Title,
-                    Container = page.Container,
-                    Contents = page.Contents.ToList(),
-                });
+                page.Order = order;
+                order += 10;
             }
+
+            await _context.SaveChangesAsync();
+        }
+
+
+        public async Task<IActionResult> Index()
+        {
+            var pages = await _context.Pages
+                .OrderBy(p => p.Order)
+                .Include(p => p.Chapters)
+                .ThenInclude(c => c.Contents)
+                .ToListAsync();
+
+            var firstOrder = pages.FirstOrDefault()?.Order;
+            var lastOrder = pages.LastOrDefault()?.Order;
+            var pageCount = pages.Count;
+
+            var model = pages.Select((page, index) => new PageViewModel
+            {
+                Id = page.Id,
+                Title = page.Title,
+                Container = page.Container,
+                Order = page.Order,
+
+                CanMoveUp = pageCount > 1 && index > 0,
+                CanMoveDown = pageCount > 1 && index < pageCount - 1,
+
+                Chapters = page.Chapters ?? new List<Chapter>(),
+
+                Relationship = new RelationshipViewModel
+                {
+                    ChildLabel = "Chapters",
+                    Children = page.Chapters?
+                        .Select(c => c.Title)
+                        .ToList() ?? new List<string>(),
+
+                    GrandchildLabel = "Contents",
+                    Grandchildren = page.Chapters?
+                        .SelectMany(c => c.Contents ?? new List<Content>())
+                        .Select(c => c.Title)
+                        .ToList() ?? new List<string>()
+                }
+
+            }).ToList();
 
             return View(model);
         }
 
-
-        // GET: PageController/Details/5
-        public IActionResult Details(int id)
+        // GET: ContentController/Details/5
+        public async Task<IActionResult> Details(int id)
         {
-            Page? page = _context.Pages
-                .Include(c => c.Contents)
-                .FirstOrDefault(p => p.Id == id);
+            var page = await _context.Pages
+                .Include(c => c.Chapters)
+                    .ThenInclude(ch => ch.Contents)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
-            return View(page);
+            if (page == null)
+            {
+                return NotFound();
+            }
+
+            var vm = new PageViewModel
+            {
+                Id = page.Id,
+                Title = page.Title,
+                Container = page.Container,
+                Order = page.Order,
+                Chapters = page.Chapters ?? new List<Chapter>(),
+
+                Relationship = new RelationshipViewModel
+                {
+                    ChildLabel = "Chapters",
+                    Children = page.Chapters?
+                        .Select(c => c.Title)
+                        .ToList() ?? new(),
+
+                    GrandchildLabel = "Contents",
+                    Grandchildren = page.Chapters?
+                        .SelectMany(c => c.Contents ?? new())
+                        .Select(c => c.Title)
+                        .ToList() ?? new()
+                }
+            };
+
+            return View(vm);
         }
 
         //GET: PageController/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
             CreatePageViewModel cpvm = new CreatePageViewModel();
-            var contents = _context.Contents;
+            var chapters = _context.Chapters;
 
-            ViewBag.ContentList = new MultiSelectList(contents, "Id", "Title");
+            ViewBag.ChapterList = new MultiSelectList(chapters, "Id", "Title");
 
             return View(cpvm);
         }
@@ -76,6 +159,23 @@ namespace WebAppBackend.Controllers
             if (ModelState.IsValid)
             {
 
+                var existingPages = await _context.Pages
+                    .OrderBy(p => p.Order)
+                    .ToListAsync();
+
+                if (NeedsPageReIndex(existingPages))
+                {
+                    await ReIndexPagesAsync();
+
+                    existingPages = await _context.Pages
+                        .OrderBy(p => p.Order)
+                        .ToListAsync();
+                }
+
+                var highestOrder = existingPages.Any()
+                    ? existingPages.Max(p => p.Order)
+                    : 0;
+
                 //Sanitize the Container content before saving to the database
                 var sanitizedContainer = _htmlSanitizer.Sanitize(page.Container);
 
@@ -83,62 +183,68 @@ namespace WebAppBackend.Controllers
                 {
                     Title = page.Title,
                     Container = sanitizedContainer,
-                    Contents = new List<Content>()
+                    Order = highestOrder + 10,
+                    Chapters = new List<Chapter>()
                 };
 
-                if (page.ContentIds != null && page.ContentIds.Any())
+                if (page.ChapterIds != null && page.ChapterIds.Any())
                 {
-                    var selectedContents = await _context.Contents
-                        .Where(c => page.ContentIds.Contains(c.Id))
+                    var selectedChapters = await _context.Chapters
+                        .Where(c => page.ChapterIds.Contains(c.Id))
                         .ToListAsync();
 
-                    pageToAdd.Contents.AddRange(selectedContents);
+                    pageToAdd.Chapters.AddRange(selectedChapters);
                 }
 
 
-                _context.Pages.Add(pageToAdd);;
+                _context.Pages.Add(pageToAdd); ;
 
                 await _context.SaveChangesAsync();
 
                 return RedirectToAction(nameof(Index));
             }
 
-            // Repopulate ContentList if validation fails
-            ViewBag.ContentList = new MultiSelectList(await _context.Contents.ToListAsync(), "Id", "Title", page.ContentIds);
+            // Repopulate ChapterList if validation fails
+            ViewBag.ChapterList = new MultiSelectList(await _context.Chapters.ToListAsync(), "Id", "Title", page.ChapterIds);
 
             return View(page);
         }
 
 
         [HttpGet]
-        public IActionResult Edit(int id)
+        public async Task<IActionResult> Edit(int id)
         {
-
-            // Try to get the page with its related contents
-            var page = _context.Pages
-                .Include(p => p.Contents)
-                .FirstOrDefault(p => p.Id == id);
-
-            foreach (var content in page.Contents)
-            {
-                Console.WriteLine($"Content ID: {content.Id}, Title: {content.Title}, Date: {(content.Date.HasValue ? content.Date.Value.ToString() : "NULL")}");
-            }
+            var page = await _context.Pages
+                .Include(p => p.Chapters)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
             if (page == null)
             {
                 return NotFound();
             }
 
-            // Initialize ViewModel
+            foreach (var chapter in page.Chapters ?? [])
+            {
+                Console.WriteLine(
+                    $"Chapter ID: {chapter.Id}, Title: {chapter.Title}"
+                );
+            }
+
             var cpvm = new CreatePageViewModel
             {
                 Title = page.Title,
                 Container = page.Container,
-                ContentIds = page.Contents.Select(c => c.Id).ToList()
+                ChapterIds = page.Chapters?
+                    .Select(c => c.Id)
+                    .ToList() ?? new List<int>()
             };
 
-            // Populate ViewBag with content options for multiselect
-            ViewBag.ContentList = new MultiSelectList(_context.Contents, "Id", "Title");
+            ViewBag.ChapterList = new MultiSelectList(
+                await _context.Chapters.ToListAsync(),
+                "Id",
+                "Title",
+                cpvm.ChapterIds
+            );
 
             return View(cpvm);
         }
@@ -149,14 +255,14 @@ namespace WebAppBackend.Controllers
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.ContentList = new MultiSelectList(await _context.Contents.ToListAsync(), "Id", "Title", page.ContentIds);
+                ViewBag.ChapterList = new MultiSelectList(await _context.Chapters.ToListAsync(), "Id", "Title", page.ChapterIds);
                 return View(page);
             }
 
             //Sanitize the Container content before saving to the database
             var sanitizedContainer = _htmlSanitizer.Sanitize(page.Container);
 
-            var pageToEdit = await _context.Pages.Include(p => p.Contents).FirstOrDefaultAsync(p => p.Id == id);
+            var pageToEdit = await _context.Pages.Include(p => p.Chapters).FirstOrDefaultAsync(p => p.Id == id);
 
             if (pageToEdit == null)
             {
@@ -167,17 +273,17 @@ namespace WebAppBackend.Controllers
             pageToEdit.Container = sanitizedContainer;
 
             // Clear old contents
-            pageToEdit.Contents.Clear();
+            pageToEdit.Chapters.Clear();
 
-            if (page.ContentIds != null && page.ContentIds.Any())
+            if (page.ChapterIds != null && page.ChapterIds.Any())
             {
-                var selectedContents = await _context.Contents
-                    .Where(c => page.ContentIds.Contains(c.Id))
+                var selectedChapters = await _context.Chapters
+                    .Where(c => page.ChapterIds.Contains(c.Id))
                     .ToListAsync();
 
-                foreach (var content in selectedContents)
+                foreach (var content in selectedChapters)
                 {
-                    pageToEdit.Contents.Add(content);
+                    pageToEdit.Chapters.Add(content);
                 }
             }
 
@@ -188,51 +294,135 @@ namespace WebAppBackend.Controllers
 
         public async Task<IActionResult> Delete(int? id)
         {
-
-            if (id == null || _context.Pages == null)
+            if (id == null)
             {
                 return NotFound();
             }
 
-            var page = await _context.Pages.Include(c => c.Contents)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var page = await _context.Pages
+                .Include(p => p.Chapters)
+                    .ThenInclude(ch => ch.Contents)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (page == null)
             {
                 return NotFound();
             }
 
-            return View(page);
+            var vm = new PageViewModel
+            {
+                Id = page.Id,
+                Title = page.Title,
+                Container = page.Container,
+                Order = page.Order,
+                Chapters = page.Chapters?.ToList() ?? new List<Chapter>(),
+
+                Relationship = new RelationshipViewModel
+                {
+                    ChildLabel = "Chapters",
+                    Children = page.Chapters?
+                        .Select(c => c.Title)
+                        .ToList() ?? new(),
+
+                    GrandchildLabel = "Contents",
+                    Grandchildren = page.Chapters?
+                        .SelectMany(c => c.Contents ?? new())
+                        .Select(c => c.Title)
+                        .ToList() ?? new()
+                }
+            };
+
+            return View(vm);
         }
 
         // POST: AssetController/Delete/5
 
         // POST: Db/Delete/5
         [HttpPost, ActionName("Delete")]
-        [HttpDelete]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id, IFormCollection collection)
+        public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            if (_context.Pages == null)
-            {
-                return Problem("Entity set 'ApplicationDbContext.Pages' is null.");
-            }
-            var content = await _context.Pages.FindAsync(id);
+            var page = await _context.Pages
+                .Include(p => p.Chapters).ThenInclude(ch => ch.Contents)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
-            var page = await _context.Pages.OrderBy(e => e.Title).Include(e => e.Contents).FirstAsync();
-
-            foreach (var cont in page.Contents)
+            if (page == null)
             {
-                cont.Page = null;
+                return NotFound();
             }
 
-            if (content != null)
+            foreach (var chapter in page.Chapters)
             {
-                _context.Pages.Remove(content);
+                chapter.PageId = null;
             }
 
+            _context.Pages.Remove(page);
 
             await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> MoveUp(int id)
+        {
+            var page = await _context.Pages
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (page == null)
+            {
+                return NotFound();
+            }
+
+
+            var previousPage = await _context.Pages
+                .Where(p => p.Order < page.Order)
+                .OrderByDescending(p => p.Order)
+                .FirstOrDefaultAsync();
+
+
+            if (previousPage != null)
+            {
+                var tempOrder = page.Order;
+
+                page.Order = previousPage.Order;
+                previousPage.Order = tempOrder;
+
+                await _context.SaveChangesAsync();
+            }
+
+
+            return Redirect($"{Url.Action(nameof(Index))}#{id}");
+
+        }
+        public async Task<IActionResult> MoveDown(int id)
+        {
+            var page = await _context.Pages
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (page == null)
+            {
+                return NotFound();
+            }
+
+
+            var nextPage = await _context.Pages
+                .Where(p => p.Order > page.Order)
+                .OrderBy(p => p.Order)
+                .FirstOrDefaultAsync();
+
+
+            if (nextPage != null)
+            {
+                var tempOrder = page.Order;
+
+                page.Order = nextPage.Order;
+                nextPage.Order = tempOrder;
+
+                await _context.SaveChangesAsync();
+            }
+
+
+            return Redirect($"{Url.Action(nameof(Index))}#{id}");
         }
     }
 }

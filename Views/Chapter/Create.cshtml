@@ -1,0 +1,118 @@
+﻿@using WebAppBackend.ViewModels
+@model CreateChapterViewModel
+
+@{
+    ViewData["Title"] = "Create Chapter";
+}
+
+<section class="container my-4">
+    <h1 class="mb-3">@ViewData["Title"]</h1>
+    <h4 class="mb-4">Add child sections to a Page container</h4>
+
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="card shadow-sm p-4">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <div class="form-group mb-3">
+            <label asp-for="Title" class="control-label"></label>
+            <input asp-for="Title" class="form-control" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+        <div class="form-group mb-4">
+            <label asp-for="Date" class="control-label">Date (Optional)</label>
+            <input asp-for="Date" class="form-control" type="date" id="Date" />
+            <span asp-validation-for="Date" class="text-danger"></span>
+        </div>
+        <div class="form-group mb-4">
+            <label asp-for="Container" class="control-label"></label>
+            <textarea asp-for="Container" id="summernote" class="form-control" rows="15"></textarea>
+            <span asp-validation-for="Container" class="text-danger"></span>
+        </div>
+        <div class="form-group mb-4">
+            <label asp-for="PageId" class="control-label"></label>
+            <select asp-for="PageId" asp-items="ViewBag.PageList" class="form-control" required>
+                <option disabled selected>--Select Page--</option>
+            </select>
+            @if (ViewBag.PageError != null)
+            {
+                <span class="text-danger">@ViewBag.PageError</span>
+            }
+        </div>
+        <div class="form-group mb-4">
+            <label asp-for="ContentIds" class="control-label"></label>
+            <select asp-for="ContentIds" asp-items="ViewBag.ContentList" multiple class="form-control" aria-describedby="chaptersHelp"></select>
+            @if (ViewBag.ContentError != null)
+            {
+                <div class="text-danger mt-1">@ViewBag.ContentError</div>
+            }
+            <div id="contentsHelp" class="form-text">Hold Ctrl (Cmd on Mac) to select multiple items.</div>
+        </div>
+        <!-- Submit -->
+        <div class="d-flex justify-content-between align-items-center">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-circle mr-1"></i>Create
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left mr-1"></i>Back to Chapters
+            </a>
+        </div>
+    </form>
+
+    <!-- Asset Selection Modal -->
+    <div class="modal fade" id="assetModal" tabindex="-1" role="dialog" aria-labelledby="assetModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assetModalLabel">Select an Asset</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="assetSearchForm" class="form-row mb-3" onsubmit="return false;">
+                        <div class="form-group col-md-4">
+                            <input type="text" class="form-control" name="name" placeholder="Search by name" aria-label="Search by name" />
+                        </div>
+                        <div class="form-group col-md-4">
+                            <input type="date" class="form-control" name="date" aria-label="Search by date" />
+                        </div>
+                        <div class="form-group col-md-4">
+                            <select class="form-control" name="category" id="categorySelect" aria-label="Filter by category">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="col-12 text-right">
+                            <button type="button" id="clearFiltersBtn" class="btn btn-sm btn-outline-secondary">Reset Filters</button>
+                        </div>
+                    </form>
+
+                    <div id="assetCount" class="mb-2 text-muted small"></div>
+                    <div class="row" id="assetContainer" role="list" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.css" rel="stylesheet" />
+   
+
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-bs4.min.js"></script>
+
+    <script src="~/js/page-editor.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+
+            PageEditor.init({
+                basePath: '@Context.Request.PathBase',
+                rootPath: '@Url.Content("~/")'
+            });
+
+        });
+    </script>
+}

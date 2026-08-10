@@ -117,15 +117,9 @@ namespace WebAppBackend.Controllers
         {
 
             var colors = await _context.Colors.FindAsync(id);
+            var cat = await _context.Colors.FirstOrDefaultAsync(m => m.Id == id);
 
-            if (id == null || _context.Colors == null)
-            {
-                return NotFound();
-            }
-
-            var cat = await _context.Colors
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (cat == null)
+            if (id == null || _context.Colors == null || cat == null)
             {
                 return NotFound();
             }

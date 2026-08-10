@@ -107,68 +107,139 @@
                 return;
             }
 
-            const objectURL = URL.createObjectURL(file);
+            const objectUrl = URL.createObjectURL(file);
             const fileType = file.type;
-            let previewHTML = "";
+            let previewHtml = "";
 
-            if (type.startsWith("image/")) {
-                previewHTML = `<img src="${objectURL}" class="img-fluid rounded" style="max-height: 200px;" alt="Image preview" loading="lazy" />`;
+            if (fileType.startsWith("image/")) {
+                previewHtml = `<img src="${objectUrl}" class="img-fluid rounded" style="max-height: 200px;" alt="Image preview" loading="lazy" />`;
                 detectedTypeInput.value = "Image";
             } else if (fileType.startsWith("video/")) {
-                previewHTML = `
+                previewHtml = `
                     <video controls class="w-100 rounded" style="max-height: 300px;">
-                        <source src="${objectURL}" type="${fileType}" />
+                        <source src="${objectUrl}" type="${fileType}" />
                         Your browser does not support the video tag.
                     </video>`;
                 detectedTypeInput.value = "Video";
             } else if (fileType.startsWith("audio/")) {
-                previewHTML = `
+                previewHtml = `
                     <audio controls class="w-100">
-                        <source src="${objectURL}" type="${fileType}" />
+                        <source src="${objectUrl}" type="${fileType}" />
                         Your browser does not support the audio element.
                     </audio>`;
                 detectedTypeInput.value = "Audio";
             } else if (fileType === "application/pdf" || fileType === "application/msword" || fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-                previewHTML = `
+                previewHtml = `
                     <div class="asset-card document-card">
                         <div>
                             📄 ${file.name}
                         </div>
                         <div class="mt-2">
-                            <a href="${objectURL}" target="_blank" class="btn btn-primary">
+                            <a href="${objectUrl}" target="_blank" class="btn btn-primary">
                                 Open Document
                             </a>
-                            <a href="${objectURL}" download="${file.name}" class="btn btn-secondary">
+                            <a href="${objectUrl}" download="${file.name}" class="btn btn-secondary">
                                 Download
                             </a>
                         </div>
                     </div>`;
 
                 detectedTypeInput.value = "Document";
-            } else if (fileType === "text/plain" || fileType === "text/markdown") {
-                previewHTML = `
-                <div class="asset-card text-card">
-                        <div>
-                            📝 ${file.name}
-                        </div>
-                        <div class="mt-2">
-                            <a href="${objectURL}" target="_blank" class="btn btn-primary">
-                                Open Text File
-                            </a>
-                            <a href="${objectURL}" download="${file.name}" class="btn btn-secondary">
-                                Download
-                            </a>
-                        </div>
-                    </div>`;
+            } else if (
+    fileType.startsWith("text/") ||
+    file.name.match(/\.(txt|md)$/i)
+) {
+    previewHtml = `
+        <div class="asset-card text-card">
+            <div>
+                📝 ${file.name}
+            </div>
+            <div class="mt-2">
+                <a href="${objectUrl}" target="_blank" class="btn btn-primary">
+                    Open Text File
+                </a>
+                <a href="${objectUrl}" download="${file.name}" class="btn btn-secondary">
+                    Download
+                </a>
+            </div>
+        </div>`;
 
-                detectedTypeInput.value = "Text";
-            }
+    detectedTypeInput.value = "Text";
+} else if (
+    fileType.startsWith("font/") ||
+    file.name.match(/\.(ttf|otf|woff|woff2)$/i)
+) {
+    const fontName = "PreviewFont";
+
+    let format = "";
+
+    if (file.name.match(/\.ttf$/i)) {
+        format = "truetype";
+    } else if (file.name.match(/\.otf$/i)) {
+        format = "opentype";
+    } else if (file.name.match(/\.woff$/i)) {
+        format = "woff";
+    } else if (file.name.match(/\.woff2$/i)) {
+        format = "woff2";
+    }
+
+    const style = document.createElement("style");
+
+    style.textContent = `
+        @@font-face {
+            font-family: "${fontName}";
+            src: url("${objectUrl}") format("${format}");
+        }
+    `;
+
+    document.head.appendChild(style);
+
+    previewHtml = `
+        <div class="border rounded p-3 bg-white">
+            <div style="
+                font-family:'${fontName}';
+                font-size:32px;
+            ">
+                The quick brown fox jumps over the lazy dog
+            </div>
+
+            <hr />
+
+            <div style="
+                font-family:'${fontName}';
+                font-size:24px;
+            ">
+                ABCDEFGHIJKLMNOPQRSTUVWXYZ
+            </div>
+
+            <div style="
+                font-family:'${fontName}';
+                font-size:24px;
+            ">
+                abcdefghijklmnopqrstuvwxyz
+            </div>
+
+            <div style="
+                font-family:'${fontName}';
+                font-size:24px;
+            ">
+                0123456789 !@@#$%^&amp;*()
+            </div>
+
+            <small class="text-muted">
+                ${file.name}
+            </small>
+        </div>
+    `;
+
+    detectedTypeInput.value = "Font";
+}
             else {
-                    previewHTML = `<p class="text-muted"><em>No preview available for this file type.</em></p>`;
+                    previewHtml = `<p class="text-muted"><em>No preview available for this file type.</em></p>`;
                     detectedTypeInput.value = "Other";
                 }
 
-                previewContainer.innerHTML = `<label class="control-label font-weight-bold mr-1">File Preview:</label>${previewHTML}`;
+                previewContainer.innerHTML = `<label class="control-label font-weight-bold mr-1">File Preview:</label>${previewHtml}`;
                 document.getElementById('DetectedFileType').value = detectedTypeInput.value;
             });
     </script>
