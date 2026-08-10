@@ -46,7 +46,8 @@ namespace WebAppBackend.Data
                 new Color { Id = 15, Name = "Instagram Fill Icon Color", StartColor = "#ffffff", EndColor = "#ffffff", DarkStartColor = "#ffffff", DarkEndColor = "#ffffff" },
                 new Color { Id = 16, Name = "Facebook Fill Icon Color", StartColor = "#ffffff", EndColor = "#ffffff", DarkStartColor = "#ffffff", DarkEndColor = "#ffffff" },
                 new Color { Id = 17, Name = "Twitter Fill Icon Color", StartColor = "#ffffff", EndColor = "#ffffff", DarkStartColor = "#ffffff", DarkEndColor = "#ffffff" },
-                new Color { Id = 18, Name = "Social Media Header Text", StartColor = "#15803D", EndColor = "#15803D", DarkStartColor = "#15803D", DarkEndColor = "#15803D" });
+                new Color { Id = 18, Name = "Social Media Header Text", StartColor = "#15803D", EndColor = "#15803D", DarkStartColor = "#15803D", DarkEndColor = "#15803D" },
+                new Color { Id = 19, Name = "Footer Text", StartColor = "#15803D", EndColor = "#15803D", DarkStartColor = "#15803D", DarkEndColor = "#15803D" });
 
 
             modelBuilder.Entity<Font>().HasData(
@@ -70,6 +71,13 @@ namespace WebAppBackend.Data
                     Name = "Social Media Header Text",
                     Style = "normal",
                     Weight = 100
+                },
+                new Font
+                {
+                    Id = 4,
+                    Name = "Website Title Footer Text Font",
+                    Style = "normal",
+                    Weight = 100
                 }
             );
 
@@ -78,7 +86,7 @@ namespace WebAppBackend.Data
                 new Page { Id = 1, Title = "Home", Container = @"<p>Home</p>", Order=10 },
                 new Page { Id = 2, Title = "Production", Container = @"<p>Production</p>", Order = 20 },
                 new Page { Id = 3, Title = "About", Container = @"<p>About</p>", Order = 30 },
-                new Page { Id = 4, Title = "Contact", Container = @"<p>Email: <a href='mailto:info@saravasha.com'>info@saravasha.com</a></p>", Order = 40 },
+                new Page { Id = 4, Title = "Contact", Container = @"<p>Email: <a href='mailto:info@__DOMAIN_NAME__'>info@__DOMAIN_NAME__</a></p>", Order = 40 },
                 new Page
                 {
                     Id = 5,
@@ -95,7 +103,7 @@ namespace WebAppBackend.Data
                 new Chapter { Id = 4, Title = "Social Media", Container = @"<p>Faceberrk</p>", PageId = 4 , Order = 40},
                 new Chapter { Id = 5, Title = "Cookie Policy", Container = @"<p>We don't use cookies</p>", PageId = 5 , Order = 50},
                 new Chapter { Id = 6, Title = "Privacy Policy", Container = @"
-            <p>At saravasha.com, we respect your privacy and are committed to protecting your personal data.</p>
+            <p>At __DOMAIN_NAME__, we respect your privacy and are committed to protecting your personal data.</p>
             <h3>Cookies</h3>
             <p>Our website does not use cookies to track visitors or personalize content. The only cookies used are for authentication purposes on the backend, which is accessible only to the site owner (administrator) for managing the website. These cookies are essential for secure login and session management and do not affect public visitors.</p>
             <h3>Personal Data</h3>
@@ -103,7 +111,7 @@ namespace WebAppBackend.Data
             <h3>Data Security</h3>
             <p>The backend login area is secured and accessible only by the site owner. We take reasonable measures to protect any stored data related to site administration.</p>
             <h3>Your Rights</h3>
-            <p>Since we do not collect personal data from visitors, there are no user data requests applicable. If you have questions or concerns about privacy, please contact us at <a href='mailto:info@saravasha.com'>info@saravasha.com</a></p>", PageId = 5,  Order = 60, Date = DateOnly.FromDateTime(DateTime.Today) }
+            <p>Since we do not collect personal data from visitors, there are no user data requests applicable. If you have questions or concerns about privacy, please contact us at <a href='mailto:info@__DOMAIN_NAME__'>info@__DOMAIN_NAME__</a></p>", PageId = 5,  Order = 60, Date = DateOnly.FromDateTime(DateTime.Today) }
             );
 
             modelBuilder.Entity<Content>().HasData(
