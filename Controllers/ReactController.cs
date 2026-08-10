@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using WebAppBackend.Models;
 using WebAppBackend.Data;
+using WebAppBackend.Services;
 
 
 namespace WebAppBackend.Controllers
@@ -13,52 +14,110 @@ namespace WebAppBackend.Controllers
     public class ReactController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public ReactController(ApplicationDbContext context)
+        private readonly ISettingsProvider _settings;
+        public ReactController(ApplicationDbContext context, ISettingsProvider settings)
         {
             _context = context;
+            _settings = settings;
         }
 
-        [HttpGet("asset")]
-        public List<Asset> GetAssets()
+        [HttpGet("assets")]
+        public async Task<ActionResult<List<Asset>>> GetAssets()
         {
-            List<Asset> assets = new List<Asset>();
-            assets = _context.Assets.Include(c => c.Categories).ToList();
-            return assets;
+            var assets = await _context.Assets
+                .Where(a => a.Type != AssetType.Font)
+                .Include(a => a.Categories)
+                .ToListAsync();
+
+            return Ok(assets);
         }
 
-        [HttpGet("category")]
-        public List<Category> GetCategories()
+        [HttpGet("categories")]
+        public async Task<ActionResult<List<Category>>> GetCategories()
         {
-            List<Category> categories = new List<Category>();
-            categories = _context.Categories.Include(c => c.Assets).ToList();
-            return categories;
+            var categories = await _context.Categories
+                .Include(c => c.Assets)
+                .ToListAsync();
+
+            return Ok(categories);
         }
 
-        [HttpGet("page")]
-        public List<Page> GetPages()
+        [HttpGet("pages")]
+        public async Task<ActionResult<List<Page>>> GetPages()
         {
-            return _context.Pages
+            var pages = await _context.Pages
+                .OrderBy(p => p.Order)
                 .Select(p => new Page
                 {
                     Id = p.Id,
                     Title = p.Title,
+                    Container = p.Container,
 
-                    Contents = p.Contents
-                        .OrderByDescending(c => c.Id)
-                        .ToList(),
+                    Chapters = p.Chapters
+                        .OrderBy(c => c.Order)
+                        .Select(c => new Chapter
+                        {
+                            Id = c.Id,
+                            Title = c.Title,
+                            Container = c.Container,
+                            Date = c.Date,
+                            Order = c.Order,
 
-                    // include any other properties you need
-                    Container = p.Container
+                            Contents = c.Contents
+                                .OrderBy(content => content.Order)
+                                .Select(content => new Content
+                                {
+                                    Id = content.Id,
+                                    Title = content.Title,
+                                    Container = content.Container,
+                                    Date = content.Date,
+                                    Order = content.Order
+                                })
+                                .ToList()
+                        })
+                        .ToList()
                 })
-                .ToList();
+                .ToListAsync();
+
+            return Ok(pages);
         }
 
-        [HttpGet("color")]
-        public List<Color> GetColors()
+        [HttpGet("colors")]
+        public async Task<ActionResult<List<Color>>> GetColors()
         {
-            List<Color> colors = new List<Color>();
-            colors = _context.Colors.ToList();
-            return colors;
-        }    
+            var colors = await _context.Colors
+                .ToListAsync();
+
+            return Ok(colors);
+        }
+
+        [HttpGet("fonts")]
+        public async Task<ActionResult<List<Font>>> GetFonts()
+        {
+            var fonts = await _context.Fonts.Include(f => f.Asset)
+                .Select(f => new
+                {
+                    f.Id,
+                    f.Name,
+                    f.Style,
+                    f.Weight,
+                    Asset = new
+                    {
+                        f.Asset.Name,
+                        f.Asset.FileUrl,
+                    }
+
+                }).ToListAsync();
+            return Ok(fonts);
+        }
+
+        [HttpGet("settings")]
+        public async Task<ActionResult> GetSettings()
+        {
+            var settings = await _settings.GetAsync();
+
+            return Ok(settings);
+        }
+
     }
 }

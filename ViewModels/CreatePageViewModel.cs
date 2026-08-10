@@ -12,8 +12,8 @@ namespace WebAppBackend.ViewModels
         public string Title { get; set; }
         [Display(Name = "Page Main Content")]
         public string? Container { get; set; }
-        [Display(Name = "Content:")]
-        public List<int>? ContentIds { get; set; } = new();
-        public List<Content>? Contents { get; set; } = new();
+        [Display(Name = "Chapter:")]
+        public List<int>? ChapterIds { get; set; } = new();
+        public List<Chapter>? Chapters { get; set; } = new();
     }
 }

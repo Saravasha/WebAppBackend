@@ -37,7 +37,9 @@ namespace WebAppBackend.Data
             }
 
             // Create or update admin user
+            // Create admin user if it doesn't exist
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
             if (adminUser == null)
             {
                 adminUser = new IdentityUser
@@ -48,24 +50,22 @@ namespace WebAppBackend.Data
                 };
 
                 var createResult = await userManager.CreateAsync(adminUser, adminPassword);
+
                 if (!createResult.Succeeded)
-                    throw new Exception("Failed to create admin user: " +
+                    throw new Exception(
+                        "Failed to create admin user: " +
                         string.Join(", ", createResult.Errors.Select(e => e.Description)));
-            }
-            else
-            {
-                // Optionally reset password if needed
-                var token = await userManager.GeneratePasswordResetTokenAsync(adminUser);
-                var resetResult = await userManager.ResetPasswordAsync(adminUser, token, adminPassword);
-                if (!resetResult.Succeeded)
-                    throw new Exception("Failed to reset admin password: " +
-                        string.Join(", ", resetResult.Errors.Select(e => e.Description)));
             }
 
             // Ensure user is in Admin role
             if (!await userManager.IsInRoleAsync(adminUser, adminRole))
             {
-                await userManager.AddToRoleAsync(adminUser, adminRole);
+                var roleResult = await userManager.AddToRoleAsync(adminUser, adminRole);
+
+                if (!roleResult.Succeeded)
+                    throw new Exception(
+                        "Failed to assign admin role: " +
+                        string.Join(", ", roleResult.Errors.Select(e => e.Description)));
             }
         }
     }

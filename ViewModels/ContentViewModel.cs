@@ -19,12 +19,18 @@ namespace WebAppBackend.ViewModels
         [Display(Name = "Container Body")]
         [JsonIgnore]
         public string? Container { get; set; }
-        public int? PageId { get; set; }
+        public int Order { get; set; }
+        public int? ChapterId { get; set; }
         public Page? Page { get; set; }
+        public Chapter? Chapter { get; set; }
 
-        public List<int>? PageIds { get; set; } = new();
-        public List<Page>? Pages { get; set; } = new();
-        public List<Content>? Contents { get; set; } = new();
+        public List<int>? ChapterIds { get; set; } = new();
+        public List<Chapter>? Chapters { get; set; } = new();
+
+        public RelationshipViewModel Relationship { get; set; } = new();
+
+        public bool CanMoveUp { get; set; }
+        public bool CanMoveDown { get; set; }
 
     }
 }

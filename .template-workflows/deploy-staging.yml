@@ -47,6 +47,27 @@ jobs:
       - name: Publish app
         run: dotnet publish -c Release -o __BACKEND_PUBLISH_PATH__
 
+      - name: Apply EF Core Migrations
+        working-directory: __BACKEND_ROOT_PATH__
+        env:
+          DOTNET_ENVIRONMENT: Production
+          ASPNETCORE_ENVIRONMENT: Production
+          CONNECTION_STRING: ${{ secrets.CONNECTION_STRING }}
+        run: |
+          set -euo pipefail
+
+          dotnet tool update --global dotnet-ef || true
+          export PATH="$PATH:$HOME/.dotnet/tools"
+
+          echo "🧹 Ensuring clean build..."
+          dotnet clean -c Release || true
+
+          echo "🔧 Building Release..."
+          dotnet build -c Release --no-restore
+
+          echo "🗄 Running EF migrations..."
+          dotnet ef database update
+
       - name: Deploy with PM2
         run: |
           pm2 delete __PM2_APP_NAME__ || true

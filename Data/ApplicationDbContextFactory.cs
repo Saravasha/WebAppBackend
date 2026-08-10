@@ -1,31 +1,34 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using System;
 
-namespace WebAppBackend.Data
+namespace WebAppBackend.Data;
+
+public class ApplicationDbContextFactory
+    : IDesignTimeDbContextFactory<ApplicationDbContext>
 {
-    public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<ApplicationDbContext>
+    public ApplicationDbContext CreateDbContext(string[] args)
     {
-        public ApplicationDbContext CreateDbContext(string[] args)
-        {
-            // Get connection string ONLY from environment variable
-            var envConnectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
-            
-            var connectionString = !string.IsNullOrEmpty(envConnectionString)
-                ? envConnectionString
-                : new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.Development.json", optional: false)
-                    .Build()
-                    .GetConnectionString("DefaultConnection");
 
-            if (string.IsNullOrEmpty(connectionString))
-                throw new InvalidOperationException("Connection String Error.");
+        var envConnectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
 
-            var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-            optionsBuilder.UseSqlServer(connectionString);
+        var connectionString = !string.IsNullOrEmpty(envConnectionString)
+            ? envConnectionString
+            : new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.Development.json", optional: false)
+                .Build()
+                .GetConnectionString("DefaultConnection");
 
-            return new ApplicationDbContext(optionsBuilder.Options);
-        }
+        if (string.IsNullOrEmpty(connectionString))
+            throw new InvalidOperationException("Connection String Error.");
+
+        Console.WriteLine($"🗄️ EF migration database: {new SqlConnectionStringBuilder(connectionString).InitialCatalog}");
+
+        var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+        optionsBuilder.UseSqlServer(connectionString);
+
+
+        return new ApplicationDbContext(optionsBuilder.Options);
     }
 }

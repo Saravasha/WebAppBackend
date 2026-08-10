@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SendGrid.Helpers.Mail;
 using WebAppBackend.Data;
 using WebAppBackend.Models;
 using WebAppBackend.Services;
@@ -23,46 +24,166 @@ namespace WebAppBackend.Controllers
 
         }
 
-        public async Task<IActionResult> Index()
+        private bool NeedsContentReIndex(List<Models.Content> contents)
         {
-            var model = new List<ContentViewModel>();
+            if (!contents.Any())
+            {
+                return false;
+            }
 
-            var contents = await _context.Contents
-                .Include(c => c.Page)
+            var highestOrder = contents.Max(p => p.Order);
+
+            // Example:
+            // 100 contents normally means highest order should be around 1000.
+            // If it exceeds 100x that, something is unusual.
+            var expectedMaximum = contents.Count * 10;
+
+            return highestOrder > expectedMaximum * 100;
+        }
+
+        private async Task ReIndexContentsAsync(int pageId)
+        {
+            var chapters = await _context.Chapters
+                .Where(c => c.PageId == pageId)
+                .OrderBy(c => c.Order)
                 .ToListAsync();
 
-            foreach (var content in contents)
+            var order = 10;
+
+            foreach (var chapter in chapters)
             {
-                model.Add(new ContentViewModel
+                chapter.Order = order;
+                order += 10;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+
+        public async Task<IActionResult> Index()
+        {
+            var contents = await _context.Contents
+                .Include(c => c.Chapter)
+                    .ThenInclude(ch => ch.Page)
+                .OrderBy(c => c.ChapterId)
+                .ThenBy(c => c.Order)
+                .ToListAsync();
+
+            var model = new List<ContentViewModel>();
+
+            foreach (var chapterGroup in contents
+                .Where(c => c.Chapter != null)
+                .GroupBy(c => c.ChapterId))
+            {
+                var orderedContents = chapterGroup
+                    .OrderBy(c => c.Order)
+                    .ToList();
+
+                for (int i = 0; i < orderedContents.Count; i++)
+                {
+                    var content = orderedContents[i];
+
+                    model.Add(new ContentViewModel
+                    {
+                        Id = content.Id,
+                        Title = content.Title,
+                        Container = content.Container,
+                        Date = content.Date,
+                        Order = content.Order,
+
+                        Chapter = content.Chapter,
+                        ChapterId = content.Chapter?.Id,
+                        Page = content.Chapter?.Page,
+
+                        CanMoveUp = i > 0,
+                        CanMoveDown = i < orderedContents.Count - 1,
+
+                        Relationship = new RelationshipViewModel
+                        {
+                            ParentLabel = "Page",
+                            ParentTitle = content.Chapter?.Page?.Title,
+
+                            ChildLabel = "Chapter",
+                            Children = content.Chapter != null
+                                ? new List<string>
+                                {
+                            content.Chapter.Title
+                                }
+                                : new List<string>()
+                        }
+                    });
+                }
+            }
+
+            // Orphan contents
+            model.AddRange(contents
+                .Where(c => c.Chapter == null)
+                .Select(content => new ContentViewModel
                 {
                     Id = content.Id,
                     Title = content.Title,
                     Container = content.Container,
                     Date = content.Date,
-                    Page = content.Page
-                });
-            }
+                    Order = content.Order,
+
+                    Chapter = null,
+                    ChapterId = null,
+                    Page = null,
+
+                    CanMoveUp = false,
+                    CanMoveDown = false
+                }));
 
             return View(model);
         }
 
-        // GET: PageController/Details/5
-        public IActionResult Details(int id)
+        // GET: ContentController/Details/5
+        public async Task<IActionResult> Details(int id)
         {
-            Content? content = _context.Contents
-                .Include(c => c.Page)
-                .FirstOrDefault(p => p.Id == id);
+            var content = await _context.Contents
+                .Include(c => c.Chapter)
+                    .ThenInclude(ch => ch.Page)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
-            return View(content);
+            if (content == null)
+            {
+                return NotFound();
+            }
+
+            var vm = new ContentViewModel
+            {
+                Id = content.Id,
+                Title = content.Title,
+                Container = content.Container,
+                Date = content.Date,
+                Chapter = content.Chapter,
+                Page = content.Chapter?.Page,
+
+                Relationship = new RelationshipViewModel
+                {
+                    ParentLabel = "Page",
+                    ParentTitle = content.Chapter?.Page?.Title,
+
+                    ChildLabel = "Chapter",
+                    Children = content.Chapter != null
+                        ? new List<string>
+                        {
+                            content.Chapter.Title
+                        }
+                        : new List<string>()
+                }
+            };
+
+            return View(vm);
         }
 
         //GET: PageController/Create
         public IActionResult Create()
         {
             CreateContentViewModel ccvm = new CreateContentViewModel();
-            var pages = _context.Pages;
+            var chapters = _context.Chapters;
 
-            ViewBag.PageList = new SelectList(pages, "Id", "Title");
+            ViewBag.ChapterList = new SelectList(chapters, "Id", "Title");
 
             return View(ccvm);
         }
@@ -71,34 +192,69 @@ namespace WebAppBackend.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateContentViewModel content)
         {
-            if (!ModelState.IsValid || content.PageId == 0)
+            if (!ModelState.IsValid || content.ChapterId == 0)
             {
-                if (content.PageId == 0)
+                if (content.ChapterId == 0)
                 {
-                    ViewBag.PageError = "Page is required";
+                    ViewBag.PageError = "Chapter is required";
                 }
 
-                ViewBag.PageList = new SelectList(await _context.Pages.ToListAsync(), "Id", "Title", content.PageId);
+                ViewBag.ChapterList = new SelectList(
+                    await _context.Chapters.ToListAsync(),
+                    "Id",
+                    "Title",
+                    content.ChapterId
+                );
+
                 return View(content);
             }
 
-            //Sanitize the Container content before saving to the database
+
+            var chapterId = content.ChapterId.Value;
+
+
+            var existingContents = await _context.Contents
+                .Where(c => c.ChapterId == chapterId)
+                .OrderBy(c => c.Order)
+                .ToListAsync();
+
+
+            if (NeedsContentReIndex(existingContents))
+            {
+                await ReIndexContentsAsync(chapterId);
+
+                existingContents = await _context.Contents
+                    .Where(c => c.ChapterId == chapterId)
+                    .OrderBy(c => c.Order)
+                    .ToListAsync();
+            }
+
+
+            var highestOrder = existingContents.Any()
+                ? existingContents.Max(c => c.Order)
+                : 0;
+
+
             var sanitizedContainer = _htmlSanitizer.Sanitize(content.Container);
 
-            var contentToAdd = new Content
+
+            var contentToAdd = new Models.Content
             {
                 Title = content.Title,
                 Date = content.Date,
                 Container = sanitizedContainer,
-                PageId = content.PageId
+                ChapterId = content.ChapterId,
+                Order = highestOrder + 10
             };
 
+
             _context.Contents.Add(contentToAdd);
+
             await _context.SaveChangesAsync();
+
 
             return RedirectToAction(nameof(Index));
         }
-
 
         [HttpGet]
         public IActionResult Edit(int id)
@@ -106,7 +262,7 @@ namespace WebAppBackend.Controllers
 
             CreateContentViewModel ccvm = new CreateContentViewModel();
             var content = _context.Contents
-                .Include(c => c.Page)
+                .Include(c => c.Chapter)
                 .FirstOrDefault(p => p.Id == id);
 
             if (content != null)
@@ -114,12 +270,12 @@ namespace WebAppBackend.Controllers
                 ccvm.Title = content.Title;
                 ccvm.Date = content.Date;
                 ccvm.Container = content.Container;
-                ccvm.PageId = content.PageId;
+                ccvm.ChapterId = content.ChapterId;
 
 
-                var pages = _context.Pages;
+                var chapter = _context.Chapters;
 
-                ViewBag.PageList = new SelectList(pages, "Id", "Title");
+                ViewBag.ChapterList = new SelectList(chapter, "Id", "Title");
             }
 
             return View(ccvm);
@@ -130,12 +286,12 @@ namespace WebAppBackend.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, CreateContentViewModel content)
         {
-            
+
             if (!ModelState.IsValid)
             {
-                ViewBag.PageList = new SelectList(await _context.Pages.ToListAsync(), "Id", "Title", content.PageId);
+                ViewBag.ChapterList = new SelectList(await _context.Chapters.ToListAsync(), "Id", "Title", content.ChapterId);
                 return View(content);
-            }
+            };
 
             var contentToEdit = await _context.Contents.FindAsync(id);
 
@@ -143,15 +299,44 @@ namespace WebAppBackend.Controllers
             {
                 return NotFound();
             }
+
+            var originalChapterId = contentToEdit.ChapterId;
             //Sanitize the Container content before saving to the database
             var sanitizedContainer = _htmlSanitizer.Sanitize(content.Container);
 
             contentToEdit.Title = content.Title;
             contentToEdit.Date = content.Date;
             contentToEdit.Container = sanitizedContainer;
-            contentToEdit.PageId = content.PageId;
+            contentToEdit.ChapterId = content.ChapterId;
 
+
+            if (originalChapterId != content.ChapterId)
+            {
+                var chapterId = content.ChapterId!.Value;
+
+                var existingContents = await _context.Contents
+                    .Where(c => c.ChapterId == chapterId)
+                    .OrderBy(c => c.Order)
+                    .ToListAsync();
+
+                if (NeedsContentReIndex(existingContents))
+                {
+                    await ReIndexContentsAsync(chapterId);
+
+                    existingContents = await _context.Contents
+                        .Where(c => c.ChapterId == chapterId)
+                        .OrderBy(c => c.Order)
+                        .ToListAsync();
+                }
+
+                var highestOrder = existingContents.Any()
+                    ? existingContents.Max(c => c.Order)
+                    : 0;
+
+                contentToEdit.Order = highestOrder + 10;
+            }
             _context.Contents.Update(contentToEdit);
+
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
@@ -159,21 +344,46 @@ namespace WebAppBackend.Controllers
 
         public async Task<IActionResult> Delete(int? id)
         {
-            
-
-            if (id == null || _context.Contents == null)
+            if (id == null)
             {
                 return NotFound();
             }
 
-            var cont = await _context.Contents.Include(p => p.Page)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (cont == null)
+            var content = await _context.Contents
+                .Include(c => c.Chapter)
+                    .ThenInclude(ch => ch.Page)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (content == null)
             {
                 return NotFound();
             }
 
-            return View(cont);
+            var vm = new ContentViewModel
+            {
+                Id = content.Id,
+                Title = content.Title,
+                Container = content.Container,
+                Date = content.Date,
+                Chapter = content.Chapter,
+                Page = content.Chapter?.Page,
+
+                Relationship = new RelationshipViewModel
+                {
+                    ParentLabel = "Page",
+                    ParentTitle = content.Chapter?.Page?.Title,
+
+                    ChildLabel = "Chapter",
+                    Children = content.Chapter != null
+                        ? new List<string>
+                        {
+                            content.Chapter.Title
+                        }
+                        : new List<string>()
+                }
+            };
+
+            return View(vm);
         }
 
         // POST: AssetController/Delete/5
@@ -188,14 +398,84 @@ namespace WebAppBackend.Controllers
             {
                 return Problem("Entity set 'ApplicationDbContext.Contents' is null.");
             }
-            var content = await _context.Contents.FindAsync(id);
-            if (content != null)
+            var chapter = await _context.Contents.FindAsync(id);
+            if (chapter != null)
             {
-                _context.Contents.Remove(content);
+                _context.Contents.Remove(chapter);
             }
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> MoveUp(int id)
+        {
+            var content = await _context.Contents
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (content == null || content.ChapterId == null)
+            {
+                return Redirect($"{Url.Action(nameof(Index))}#{id}");
+            }
+
+
+            var previousChapter = await _context.Contents
+                .Where(c => c.ChapterId == content.ChapterId &&
+                            c.Order < content.Order)
+                .OrderByDescending(c => c.Order)
+                .FirstOrDefaultAsync();
+
+
+            if (previousChapter == null)
+            {
+                return Redirect($"{Url.Action(nameof(Index))}#{id}");
+            }
+
+
+            var currentOrder = content.Order;
+
+            content.Order = previousChapter.Order;
+            previousChapter.Order = currentOrder;
+
+
+            await _context.SaveChangesAsync();
+
+            return Redirect($"{Url.Action(nameof(Index))}#{id}");
+        }
+
+        public async Task<IActionResult> MoveDown(int id)
+        {
+            var content = await _context.Contents
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (content == null || content.ChapterId == null)
+            {
+                return Redirect($"{Url.Action(nameof(Index))}#{id}");
+            }
+
+
+            var nextContent = await _context.Contents
+                .Where(c => c.ChapterId == content.ChapterId &&
+                            c.Order > content.Order)
+                .OrderBy(c => c.Order)
+                .FirstOrDefaultAsync();
+
+
+            if (nextContent == null)
+            {
+                return Redirect($"{Url.Action(nameof(Index))}#{id}");
+            }
+
+
+            var currentOrder = content.Order;
+
+            content.Order = nextContent.Order;
+            nextContent.Order = currentOrder;
+
+
+            await _context.SaveChangesAsync();
+
+            return Redirect($"{Url.Action(nameof(Index))}#{id}");
         }
     }
 }

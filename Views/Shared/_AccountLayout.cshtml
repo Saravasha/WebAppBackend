@@ -1,9 +1,22 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Hosting
+@using WebAppBackend.Services
+@inject IWebHostEnvironment env
+@inject ISettingsProvider SettingsProvider
+
+@{
+    var appSettings = await SettingsProvider.GetAsync();
+}﻿
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewBag.Title</title>
+    <link rel="icon"
+      href="@(appSettings.Branding.FaviconAsset != null 
+            ? $"{appSettings.Branding.FaviconAsset.FileUrl}" 
+            : "/favicon.ico")">
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
 

@@ -9,19 +9,15 @@ namespace WebAppBackend.Models
         [Key]
         public int Id { get; set; }
 
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
-        public string Family { get; set; }
+        public string Style { get; set; } = string.Empty;
 
-        public string Style { get; set; }
+        public int Weight { get; set; }
 
-        public string Weight { get; set; }
+        public int? AssetId { get; set; }
 
-        public string FileUrl { get; set; }
-
-        [NotMapped]
-        [JsonIgnore]
-        public IFormFile FileUp { get; set; }
+        public Asset? Asset { get; set; } = null!;
 
 
     }

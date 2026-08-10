@@ -15,13 +15,13 @@
 
     public string ThumbnailsRoot => Path.Combine(UploadsRoot, "Thumbnails");
 
-    public string WebAssetsRoot => Path.Combine(_env.WebRootPath, "Assets");
+    //public string WebAssetsRoot => Path.Combine(_env.WebRootPath, "Assets");
 
     public string ToWebPath(string fullPath)
     {
         var uploadsRoot = Path.GetFullPath(UploadsRoot) + Path.DirectorySeparatorChar;
         var publishRoot = Path.GetFullPath(PublishRoot) + Path.DirectorySeparatorChar;
-        var webRoot = Path.GetFullPath(_env.WebRootPath) + Path.DirectorySeparatorChar;
+        //var webRoot = Path.GetFullPath(_env.WebRootPath) + Path.DirectorySeparatorChar;
 
         if (fullPath.StartsWith(uploadsRoot, StringComparison.OrdinalIgnoreCase))
         {
@@ -35,11 +35,11 @@
             return "/Publish/" + relativePath.Replace("\\", "/");
         }
 
-        if (fullPath.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            var relativePath = fullPath.Substring(webRoot.Length);
-            return "/" + relativePath.Replace("\\", "/");
-        }
+        //if (fullPath.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase))
+        //{
+        //    var relativePath = fullPath.Substring(webRoot.Length);
+        //    return "/" + relativePath.Replace("\\", "/");
+        //}
 
         // Debug fallback
         return "/unmapped/" + fullPath.Replace("\\", "/");
