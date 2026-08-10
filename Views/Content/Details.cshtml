@@ -1,5 +1,5 @@
 ﻿@using WebAppBackend.Models
-@model Content
+@model ContentViewModel
 
 @{
     ViewData["Title"] = "Content Details";
@@ -20,9 +20,66 @@
                 <dd class="col-sm-10 ContentContainer">
                     @Html.Raw(Model.Container)
                 </dd>
-                <dt class="col-sm-2">@Html.DisplayNameFor(model => model.Page.Title)</dt>
+                <dt class="col-sm-2">
+                    Relationships
+                </dt>
+
                 <dd class="col-sm-10">
-                    <span class="badge badge-primary">@Html.DisplayFor(model => model.Page.Title)</span>
+
+                    @if (Model.Relationship != null)
+                    {
+                        @if (!string.IsNullOrEmpty(Model.Relationship.ParentLabel))
+                        {
+                            <div>
+                                <strong>@Model.Relationship.ParentLabel</strong>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(Model.Relationship.ParentTitle))
+                            {
+                                <span class="badge badge-primary">
+                                    @Model.Relationship.ParentTitle
+                                </span>
+                            }
+                            else
+                            {
+                                <p class="text-muted font-italic">
+                                    No @Model.Relationship.ParentLabel available.
+                                </p>
+                            }
+                        }
+
+
+                        @if (!string.IsNullOrEmpty(Model.Relationship.ChildLabel))
+                        {
+                            <div class="mt-3">
+                                <strong>@Model.Relationship.ChildLabel</strong>
+                            </div>
+
+                            @if (Model.Relationship.Children != null &&
+                                 Model.Relationship.Children.Any())
+                            {
+                                foreach (var child in Model.Relationship.Children)
+                                {
+                                    <span class="badge badge-secondary me-1">
+                                        @child
+                                    </span>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted font-italic">
+                                    No @Model.Relationship.ChildLabel available.
+                                </p>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted font-italic">
+                            No relationships available.
+                        </p>
+                    }
+
                 </dd>
             </dl>
         </div>

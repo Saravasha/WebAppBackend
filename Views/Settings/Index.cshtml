@@ -1,0 +1,211 @@
+@model SettingsViewModel
+@using WebAppBackend.ViewModels.Settings
+
+@{
+    ViewData["Title"] = "Settings";
+}
+
+
+<section class="container-fluid my-4">
+
+    <div class="mb-4">
+        <h1 class="display-6 fw-bold">
+            <i class="bi bi-gear me-2"></i>
+            @ViewData["Title"]
+        </h1>
+
+        <p class="text-muted">
+            Manage application configuration and modules.
+        </p>
+    </div>
+
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4">
+
+        @foreach (var module in Model.Modules)
+        {
+            <div class="col">
+
+                <div class="card shadow-sm h-100 border-0">
+                    <div class="card-header bg-transparent">
+
+                        <div class="d-flex align-items-center gap-2">
+
+                            <i class="@module.Icon fs-4 mr-2"></i>
+
+                            <h4 class="mb-0">
+                                @module.Name
+                            </h4>
+
+                        </div>
+
+                    </div>
+
+                    <div class="card-body px-4">
+
+                        <p class="text-muted">
+                            @module.Description
+                        </p>
+
+
+                        @if (module.Summary is BrandingViewModel branding)
+                        {
+                            <div class="border rounded p-3 bg-light">
+
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        Application Name
+                                    </small>
+
+                                    <div class="fw-semibold">
+                                        @branding.AppName
+                                    </div>
+                                </div>
+
+
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        Description
+                                    </small>
+
+                                    <div class="small">
+                                        @branding.Description
+                                    </div>
+                                </div>
+
+
+                                <div class="mb-2">
+                                    @if (branding.LoginImageAsset != null)
+                                    {
+                                        @* <div> *@
+                                        <small class="text-muted d-block">
+                                            Login Background Image
+                                        </small>
+
+                                        <img src="@branding.LoginImageAsset.FileUrl"
+                                             class="rounded border"
+                                             height="48" />
+                                        @* </div> *@
+                                    }
+
+                                </div>
+                                <div class="mb-2">
+                                    @if (branding.FaviconAsset != null)
+                                    {
+                                        <div>
+                                            <small class="text-muted d-block">
+                                                Favicon
+                                            </small>
+
+                                            <img src="@branding.FaviconAsset.FileUrl"
+                                                 class="rounded border"
+                                                 height="32" />
+                                        </div>
+                                    }
+                                </div>
+                                <div class="mb-2">
+                                    @if (branding.HomescreenAsset != null)
+                                    {
+                                        <div>
+                                            <small class="text-muted d-block">
+                                                Home Screen
+                                            </small>
+
+                                            <img src="@branding.HomescreenAsset.FileUrl"
+                                                 class="rounded border"
+                                                 height="64" />
+                                        </div>
+                                    }
+                                </div>
+                                @*     <div class="d-flex gap-3 mt-3">
+                                </div> *@
+
+                            </div>
+                        }
+
+                        @if (module.Summary is SocialMediaViewModel social)
+                        {
+                            <div class="border rounded p-3 bg-light">
+
+
+                                <small class="text-muted">Header Text</small>
+                                <div class="fw-semibold">
+                                    <span>
+
+                                    @social.HeaderText
+                                    </span>
+                                </div>
+
+                                <small class="text-muted">Instagram</small>
+                                <div class="fw-semibold">
+                                    @if (social.InstagramVisible)
+                                    {
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        @social.InstagramUrl
+                                    }
+                                    else
+                                    {
+
+                                        <i class="bi bi-x-circle text-muted"></i>
+                                        <span>Hidden</span>
+                                    }
+                                </div>
+
+
+                                <small class="text-muted">Facebook</small>
+                                <div class="fw-semibold">
+                                    @if (social.FacebookVisible)
+                                    {
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        @social.FacebookUrl
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle text-muted"></i>
+                                        <span>Hidden</span>
+                                    }
+                                </div>
+
+
+                                <small class="text-muted">X / Twitter</small>
+                                <div class="fw-semibold">
+                                    @if (social.TwitterVisible)
+                                    {
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        @social.TwitterUrl
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle text-muted"></i>
+                                        <span>Hidden</span>
+                                    }
+                                </div>
+                                <dl>
+                                </dl>
+                            </div>
+                        }
+
+                    </div>
+
+
+                    <div class="card-footer bg-transparent border-0 px-4 pb-4">
+
+                        <a asp-controller="Settings"
+                           asp-action="@module.Action"
+                           class="btn btn-primary w-100">
+
+                            <i class="bi bi-pencil-square me-1"></i>
+                            Manage @module.Name
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+
+</section>

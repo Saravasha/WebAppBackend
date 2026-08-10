@@ -1,0 +1,82 @@
+﻿@model CreateFontViewModel
+
+@{
+    ViewData["Title"] = "Edit Font";
+
+}
+
+<section class="container my-4">
+    <h1 class="mb-3">@ViewData["Title"]</h1>
+    <h4 class="mb-4">Edit Font</h4>
+
+    <form asp-action="Edit" method="post" class="card shadow-sm p-4">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            
+        <div class="form-group mb-3">
+            <label asp-for="Name"></label>
+            <input asp-for="Name" class="form-control" />
+            <small class="form-text text-muted">
+                Name which will be used to address the element you want to stylize.
+            </small>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="Style"></label>
+
+            <select asp-for="Style" class="form-control">
+                <option value="normal">Normal</option>
+                <option value="italic">Italic</option>
+                <option value="oblique">Oblique</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="Weight"></label>
+
+            <select asp-for="Weight" class="form-control">
+                <option value="100">Thin (100)</option>
+                <option value="200">Extra Light (200)</option>
+                <option value="300">Light (300)</option>
+                <option value="400">Regular (400)</option>
+                <option value="500">Medium (500)</option>
+                <option value="600">Semi Bold (600)</option>
+                <option value="700">Bold (700)</option>
+                <option value="800">Extra Bold (800)</option>
+                <option value="900">Black (900)</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-4">
+            <label asp-for="AssetId"></label>
+
+            <select asp-for="AssetId"
+                    asp-items="ViewBag.FontAssets"
+                    class="form-control">
+                <option value="">-- Select uploaded font asset --</option>
+            </select>
+
+            <span asp-validation-for="AssetId" class="text-danger"></span>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex justify-content-between align-items-center">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-circle mr-1"></i>Save
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left mr-1"></i>Back to Fonts
+            </a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+
+    </script>
+}

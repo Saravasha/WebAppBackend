@@ -1,0 +1,169 @@
+@model SocialMediaViewModel
+
+@{
+    ViewData["Title"] = "Social Media";
+}
+
+<section class="container-fluid my-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-share me-2"></i>
+            @ViewData["Title"]
+        </h1>
+    </div>
+
+
+    <form asp-action="SocialMedia" method="post">
+
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <label asp-for="HeaderText" class="form-label"></label>
+                    <input asp-for="HeaderText" class="form-control" />
+                    <span asp-validation-for="HeaderText"
+                          class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        <!-- Instagram -->
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <h4>
+                    <i class="bi bi-instagram me-2"></i>
+                    Instagram
+                </h4>
+
+                <input asp-for="Id" type="hidden" />
+
+
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="InstagramVisible"
+                           class="form-check-input" />
+
+                    <label asp-for="InstagramVisible"
+                           class="form-check-label">
+                        Show Instagram
+                    </label>
+                </div>
+
+
+                <div class="mb-3">
+                    <label asp-for="InstagramUrl"
+                           class="form-label">
+                        URL
+                    </label>
+
+                    <input asp-for="InstagramUrl"
+                           class="form-control"
+                           placeholder="https://instagram.com/..." />
+
+                    <span asp-validation-for="InstagramUrl"
+                          class="text-danger"></span>
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Facebook -->
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <h4>
+                    <i class="bi bi-facebook me-2"></i>
+                    Facebook
+                </h4>
+
+
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="FacebookVisible"
+                           class="form-check-input" />
+
+                    <label asp-for="FacebookVisible"
+                           class="form-check-label">
+                        Show Facebook
+                    </label>
+                </div>
+
+
+                <div class="mb-3">
+                    <label asp-for="FacebookUrl"
+                           class="form-label">
+                        URL
+                    </label>
+
+                    <input asp-for="FacebookUrl"
+                           class="form-control"
+                           placeholder="https://facebook.com/..." />
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Twitter / X -->
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <h4>
+                    <i class="bi bi-twitter-x me-2"></i>
+                    X / Twitter
+                </h4>
+
+
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="TwitterVisible"
+                           class="form-check-input" />
+
+                    <label asp-for="TwitterVisible"
+                           class="form-check-label">
+                        Show X
+                    </label>
+                </div>
+
+
+                <div class="mb-3">
+                    <label asp-for="TwitterUrl"
+                           class="form-label">
+                        URL
+                    </label>
+
+                    <input asp-for="TwitterUrl"
+                           class="form-control"
+                           placeholder="https://x.com/..." />
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <button type="submit"
+                class="btn btn-primary">
+            Save Social Media
+        </button>
+
+
+        <a asp-controller="Settings"
+           asp-action="Index"
+           class="btn btn-secondary ms-2">
+            Cancel
+        </a>
+
+    </form>
+
+</section>

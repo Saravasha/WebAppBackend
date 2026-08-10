@@ -11,6 +11,7 @@ namespace WebAppBackend.Models
         Audio,
         Document,
         Text,
+        Font,
         Other
     }
     public class Asset
@@ -32,5 +33,6 @@ namespace WebAppBackend.Models
         public int CategoryId { get; set; }
         public List<Category> Categories { get; set; } = new List<Category>();
         public string? ThumbnailUrl { get; set; }
+        public List<Font> Fonts { get; set; } = new();
     }
 }

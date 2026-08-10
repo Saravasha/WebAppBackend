@@ -94,12 +94,12 @@
                 for (var i = 0; i < files.length; i++) {
                     var file = files[i];
                     var fileType = file.type;
-                    var objectURL = URL.createObjectURL(file);
+                    var objectUrl = URL.createObjectURL(file);
                     var previewElement;
 
                     if (fileType.startsWith('image/')) {
                         previewElement = document.createElement('img');
-                        previewElement.src = objectURL;
+                        previewElement.src = objectUrl;
                         previewElement.style.maxHeight = '100px';
                         previewElement.classList.add('img-thumbnail', 'm-1');
                     } else if (fileType.startsWith('video/')) {
@@ -108,7 +108,7 @@
                         previewElement.style.maxHeight = '100px';
                         previewElement.classList.add('rounded', 'border', 'm-1');
                         var source = document.createElement('source');
-                        source.src = objectURL;
+                        source.src = objectUrl;
                         source.type = fileType;
                         previewElement.appendChild(source);
                     } else if (fileType.startsWith('audio/')) {
@@ -116,12 +116,12 @@
                         previewElement.controls = true;
                         previewElement.classList.add('mt-2', 'm-1');
                         var source = document.createElement('source');
-                        source.src = objectURL;
+                        source.src = objectUrl;
                         source.type = fileType;
                         previewElement.appendChild(source);
                     } else if (fileType === "application/pdf") {
                         previewElement = document.createElement('iframe');
-                        previewElement.src = objectURL;
+                        previewElement.src = objectUrl;
                         previewElement.style.width = '150px';
                         previewElement.style.height = '200px';
                         previewElement.classList.add('border', 'rounded', 'm-1');
@@ -150,6 +150,57 @@
                         };
 
                         reader.readAsText(file);
+                   } else if (
+                        file.name.match(/\.(ttf|otf|woff|woff2)$/i)
+                    ) {
+                        const fontName = "PreviewFont-" + i;
+
+                        const style = document.createElement("style");
+
+                        let format = "";
+
+                        if (file.name.endsWith(".ttf")) {
+                            format = "truetype";
+                        } else if (file.name.endsWith(".otf")) {
+                            format = "opentype";
+                        } else if (file.name.endsWith(".woff")) {
+                            format = "woff";
+                        } else if (file.name.endsWith(".woff2")) {
+                            format = "woff2";
+                        }
+
+                        style.textContent = `
+                            @@font-face {
+                                font-family: "${fontName}";
+                                src: url("${objectUrl}") format("${format}");
+                            }
+                        `;
+
+                        document.head.appendChild(style);
+
+                        previewElement = document.createElement("div");
+                        previewElement.classList.add(
+                            "border",
+                            "rounded",
+                            "p-3",
+                            "m-1",
+                            "bg-white"
+                        );
+
+                        previewElement.style.width = "250px";
+
+                        previewElement.innerHTML = `
+                            <div style="
+                                font-family:'${fontName}';
+                                font-size:24px;
+                            ">
+                                Aa Bb Cc
+                            </div>
+
+                            <small>
+                                ${file.name}
+                            </small>
+                        `;
                     } else {
                         previewElement = document.createElement('div');
                         previewElement.textContent = file.name;

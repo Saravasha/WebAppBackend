@@ -13,12 +13,13 @@ namespace WebAppBackend.ViewModels
         [JsonIgnore]
         public DateOnly? Date { get; set; }
         public string? DateString => Date?.ToString("yyyy-MM-dd");
-        [Display(Name = "Content Header Image")]
+        [Display(Name = "Container Body")]
         public string? Container { get; set; }
-        [Required(ErrorMessage = "Parent Page is required")]
-        [Display(Name = "Parent Page")]
-        public int? PageId { get; set; }
-        public List<int>? PageIds { get; set; } = new();
-        public List<Page>? Pages { get; set; } = new();
+        public int Order { get; set; }
+        [Required(ErrorMessage = "Parent Chapter is required")]
+        [Display(Name = "Parent Chapter")]
+        public int? ChapterId { get; set; }
+        public List<int>? ChapterIds { get; set; } = new();
+        public List<Chapter>? Chapters { get; set; } = new();
     }
 }
